@@ -16,8 +16,12 @@
   - vlastní znaky v CG-RAM (hiragana titulku, pruh po 1 s), na MZ-1500 pruh po 1 s přes PCG;
   - moderní vzhled 320×200 (klávesa G): mapa s dnem a nocí, domovské pásmo, 9 měst, domovský čas, pruh sekund;
   - klávesa M prohodí kontinenty v obou vzhledech.
-- **Další krok:** fáze 5, velké digitální a ručičkové hodiny. Program se nahrává od 1200h, studená část je
-  v 1200h–1FFFh ([rozhodnuti.md](rozhodnuti.md), paměť).
+- **Fáze 5 (hodiny) hotová:**
+  - G na MZ-800 cyklí historický vzhled → mapa → digitální hodiny → ručičkové hodiny, vždy přes černou obrazovku;
+  - hodiny v barvách originálu, s rozšířením VRAM v 16 barvách, bez něj ve 4;
+  - program se nahrává od 1200h, studená část je v 1200h–1FFFh ([rozhodnuti.md](rozhodnuti.md), paměť).
+  - **Místo:** pod 8000h zbývá asi 270 B, studená část má rezervu asi 145 B.
+- **Další krok:** fáze 6, reálný HW (autor, [hw-otazky.md](hw-otazky.md)), README se snímky, release MZF.
 
 ## Plán vývoje
 
@@ -31,7 +35,7 @@
    - hiragana v CG-RAM;
    - prototyp moderní mapy jako PNG ke schválení;
    - grafika 320×200, mapa z Natural Earth, den a noc, domovské pásmo, přepínání `G`. **Hotovo.**
-5. **Velké digitální a ručičkové hodiny.**
+5. **Velké digitální a ručičkové hodiny.** **Hotovo.**
 6. **Reálný HW (autor), README se snímky, release MZF.**
 7. **Později port na SAPI-1** (CGA-1V, hodiny DPI na B0h/B1h, `zcc +cpm`).
 
@@ -67,7 +71,9 @@ nic nemění.
 | `src/mz/text700.c` | textová obrazovka, ASCII → kód displeje |
 | `src/mz/histview.c` | historická obrazovka: hodiny měst (po minutě postupně, jedno město za snímek), dvojtečky, pruh |
 | `src/mz/cgram.c`, `pcg1500.c` | vlastní znaky: CG-RAM MZ-800, PCG MZ-1500 |
-| `src/mz/gfx800.c` | grafika MZ-800: zapnutí a vypnutí 320×200, mapování VRAM, text z CG-ROM se stínem, bod |
+| `src/mz/gfx800.c` | grafika MZ-800: přechody přes černou obrazovku (`gfx_begin`, `gfx_end`), detekce rozšíření VRAM, 4 nebo 16 barev, text se stínem, bod |
+| `src/mz/gfx.asm` | kreslení barvou přes zápis PSET/REPLACE: text 1×, 2×2 a 4×6 (`gfx_ctext`), text na libovolný bod (`gfx_ptext`), vodorovný úsek, úsečka |
+| `src/mz/clockview.c` | digitální a ručičkové hodiny |
 | `src/mz/modview.c` | moderní vzhled: mapa po řádcích, den a noc, okraj domovského pásma, města, domovský čas, pruh |
 | `src/mz/hw.asm` | porty, 8255/8253 v obou režimech (`io_rd`, `io_wr`), řádek mapy do VRAM (`row_out`), dekódování pevniny (`land_decode`), volání monitoru |
 | `src/mz/rtc_unicard.c` | Unicard: REVD, čtení a zápis RTC (porty 50h/51h) |
@@ -102,12 +108,16 @@ nic nemění.
   - `python tools/mkmodern.py --png work/modern --utc ...` vykreslí referenční obrazovky.
 - **`tools/modref.py`** je referenční renderer moderního vzhledu se stejnou celočíselnou aritmetikou jako
   `modview.c`.
+- **`tools/clockref.py`** je referenční renderer hodin (`clockview.c`, `gfx.asm`): stejné pořadí kreslení,
+  stejná aritmetika, zápisy GDG PSET a REPLACE do 2 nebo 4 rovin. `python tools/clockref.py --utc ...` vykreslí
+  obě obrazovky v 16 i 4 barvách do `work/clock-*.png`. Geometrie hodin a tabulky jsou v `tools/mkmodern.py`.
+- **Prototypy ke schválení** (`tools/ref/`): `proto_modern.py` (mapa), `proto_clocks.py` (hodiny).
 
 ## Překlad a testy
 
 - **Program:** `build.cmd` (zsdcc) vytvoří `build/worldclock.mzf` a vypíše, kolik místa zbývá v obou částech.
-  - `build.cmd sccz80` přeloží totéž sccz80. Program se tak už nevejde (studená část končí za 2000h), slouží jen
-    k porovnání překladačů.
+  - Jen zsdcc: s sccz80 se program nevejde (studená část by končila za 2000h) a `gfx.asm` počítá s konvencí
+    zsdcc. Jádro času a smoke test jdou přeložit oběma.
   - Spouštět z `cmd` / PowerShellu (`cmd /c build.cmd`); z Git Bashe se .cmd nespustí.
 - **Emulátor:** `python tests/emu/run_wc.py [--machine eu|jp|eu-ntsc|mz800|mz1500]` na všech strojích kontroluje:
   - detekci (model, JP, NTSC, řádky, dělitel);
@@ -121,10 +131,12 @@ nic nemění.
     Evropské stroje ho čtou jako pražský, japonský jako tokijský.
   - `--drift 60`: hodina emulovaného času, porovnání hodin s emulátorem. Na PAL vychází −2,54 s/h, na NTSC
     +4,59 s/h. Emulátor jede přesně 50/60 Hz, program dělí reálnými 15611/15700. Trvá asi 3,5 min.
-- **Moderní vzhled:** `python tests/emu/run_modern.py [--utc ...]` na MZ-800 porovná roviny I a II VRAM bajt po
-  bajtu s `tools/modref.py`:
-  - po G, po M (atlantický pohled), po změně minuty, po návratu M;
-  - pak G zpět (historická obrazovka a vlastní znaky v CG-RAM) a BREAK (CG-RAM obnovená z CG-ROM).
+- **Vzhledy MZ-800:** `python tests/emu/run_modern.py [--utc ...]` porovná VRAM bajt po bajtu s referencí:
+  - mapa (roviny I a II, `tools/modref.py`): po G, po M (atlantický pohled), po změně minuty, po návratu M;
+  - hodiny (roviny I–IV, `tools/clockref.py`): digitální po G a o sekundu později, ručičkové po G a po změně
+    minuty;
+  - G zpět (historická obrazovka a vlastní znaky v CG-RAM) a BREAK (CG-RAM obnovená z CG-ROM);
+  - totéž ještě jednou bez rozšíření VRAM (příznak `TEST_NO_EXTVRAM` v testovacím bloku): hodiny ve 4 barvách.
 
 - **Jádro času:** `python tests/core/run_core.py [--cc sdcc|sccz80]`.
   - Přeloží `tests/core/test_wctime.c` pro `+test` a spustí ho v `z88dk-ticks`.
@@ -154,6 +166,10 @@ Volby zcc pro MZ:
     - u `__smallc __naked` je poslední argument na `(iy+0)`;
     - printf a conio z88dk na MZ volají monitor, nepoužívat je.
   - **Konvence asm pro C:** fastcall (`__z88dk_fastcall`), argument v HL a výsledek v L/HL. Stejné pro sccz80 i zsdcc.
+  - **Víc argumentů v asm (`gfx.asm`): konvence zsdcc sdcccall(0).** Argumenty jsou na zásobníku zprava doleva,
+    8bitové jako jeden bajt (`push af` + `inc sp`), zásobník uklízí volající, IX se zachová. sccz80 to dělá jinak
+    (16bitové argumenty), proto se program sccz80 nepřekládá.
+  - **zsdcc dělá z kreslení v C velký kód** (Bresenham s `int16_t` přes 600 B). Smyčky přes pixely psát v asm.
   - **zsdcc `-SO3 --opt-code-size` přeložil v `render()` výraz `v = x >> 3` (x 16bitové) chybně**: smyčka posunu
     `srl a; rra` dávala nesmysl (pro x = 28 vyšlo 160). Okraj pásma se pak kreslil na špatná místa. Obejito vlastní
     funkcí `border_dots()`, která porovnává v pixelech. Při podivném chování v C podezírat i překladač a podívat se
@@ -177,6 +193,11 @@ Volby zcc pro MZ:
   - Profilovat jde vzorkováním PC: `run` po jednom snímku a `get_registers`, PC přiřadit funkci podle
     `build/worldclock.map`.
 - **Hardware** (podrobnosti v [rozhodnuti.md](rozhodnuti.md)):
+  - **GDG MZ-800 (mz800emu `vramctrl.c`):** zápis WF (CCh) bity 0–3 roviny, bit 4 banka, bity 5–7 režim. SINGLE,
+    EXOR, OR a RESET píšou do vybraných rovin, v 320×200 i do III a IV. REPLACE a PSET píšou do rovin režimu: ve
+    4 barvách I a II, v 16 barvách všech čtyř. Čtení přes RF (CDh); rovina bez rozšíření čte FFh.
+  - **16 barev (DMD 02h):** barva, jejíž bity rovin III a IV se rovnají skupině palety (F0h s bitem 6), jde přes
+    paletu, ostatní jsou IGRB přímo. Se skupinou 0 a paletou 0, 1, 2, 3 jsou všechna čísla barev IGRB.
   - Na MZ-800 mapuje `IN (E0h)` v režimu 320×200 VRAM na 8000h–9FFFh a CG-ROM na 1000h–1FFFh současně. Kód, který
     běží s namapovanou VRAM, ani jeho data nesmí ležet v 1000h–1FFFh ani 8000h–9FFFh.
   - Na MZ-700 nikdy nedělat `IN (E0h)`.

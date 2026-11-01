@@ -80,7 +80,8 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Měření:**
   - smoke test: zsdcc 598 B, sccz80 776 B;
   - jádro času (`tests/core/run_core.py`, 8358 vektorů): zsdcc 175 tis. T na vektor, sccz80 193 tis. T.
-- **Výchozí je zsdcc** (`zcc -compiler=sdcc`). Build i testy s sccz80 zůstávají funkční.
+- **Výchozí je zsdcc** (`zcc -compiler=sdcc`). Program se od fáze 5 překládá jen jím (místo, konvence `gfx.asm`),
+  jádro času a smoke test i sccz80.
 
 ## 2026-11-01: jádro času
 
@@ -225,3 +226,32 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Ověření:** `tools/modref.py` počítá stejnou celočíselnou aritmetikou, test porovnává VRAM bajt po bajtu.
 - **Rychlost:** překreslení po G trvá asi 1,5 s, po M asi 1,4 s. Řádek mapy se skládá v asm (`land_decode`,
   `row_out`); většinu zbytku tvoří zápisy do VRAM a texty.
+
+## 2026-11-01: hodiny na MZ-800 (fáze 5, autor)
+
+- **Klávesa G cyklí vzhledy MZ-800:** historický → mapa → digitální hodiny → ručičkové hodiny → historický.
+  M platí pro historický vzhled a mapu, na hodinách nedělá nic.
+- **Přechod:** obrazovka nejdřív zčerná, pak se přepne režim a nakonec se kreslí (autor).
+  - Z režimu MZ-700: atributy textu na 0, pak černá paleta a DMD 00h. Obrazovka je černá, ať je ve VRAM cokoli.
+  - Mezi obrazovkami MZ-800: černá paleta a DMD 00h zčerní obrazovku hned, i když předtím byla v 16 barvách.
+  - Pak se smažou všechny čtyři roviny (8 KB), nastaví se cílový režim a paleta.
+  - Zpět do režimu MZ-700: smazaná rovina I znamená nulové znaky, atributy i CG-RAM, tedy černou obrazovku, dokud
+    se neobnoví CG-RAM a nevykreslí historický vzhled.
+- **Digitální hodiny: varianta B** (autor): HH:MM:SS ze znaků CG-ROM zvětšených 4×6, pod nimi domovské pásmo
+  a jeho posun, 9 měst ve 3 sloupcích, pruh sekund s pravítkem. Domovský čas se dole neopakuje.
+- **Ručičkové hodiny:** ciferník 1,2× širší než vysoký (body MZ-800 jsou na obrazovce 4:3 asi 1,2× vyšší než
+  široké), 60 teček, 12 čárek, číslice 12, 3, 6, 9, ručičky po minutových polohách (hodinová po 12 minutách),
+  vteřinová s přesahem. Vedle domovské pásmo, čas 2×2, posun a seznam měst.
+  - Ciferník je ve dne doma světle modrý, v noci tmavý. Den a noc se počítá stejně jako na mapě.
+- **Barvy v ladění originálu** (autor): titulek azurový, jména červená, časy žluté, pruh purpurový, pravítko
+  zelené. U měst je čas ve dne žlutý a v noci modrý.
+  - **S rozšířením VRAM** 16 barev (DMD 02h, paleta 0–3 identická, čísla barev jsou IGRB): titulek 13, číslice
+    14, jména 10, noc 9, pruh 11, pravítko 12, ciferník 9 / 1, obruba 2, značky 15, vteřinová ručička 10.
+  - **Bez rozšíření** 4 barvy: černá, modrá, světle červená, světle žlutá. Pravítko je modré a pruh červený.
+  - Rozšíření se pozná zápisem do roviny III a čtením zpět (bez něj FFh), jednou za běh.
+- **Mapa zůstává ve schválené paletě A** a ve 4 barvách.
+- **Kreslení** (`gfx.asm`) jde přes zápisy GDG PSET (nastaví body bajtu na barvu) a REPLACE (barva na černé).
+  Ve 4 i 16 barvách je to tentýž kód.
+- **Každou sekundu** se překreslí jen změněné číslice. U ručiček se stará vteřinová přetáhne barvou ciferníku,
+  pak se znovu nakreslí číslice ciferníku a všechny ručičky. Ručičky nesahají na značky.
+- **Každou minutu** se překreslí poloha Slunce, časy měst, posun, datum a při změně dne a noci celý ciferník.

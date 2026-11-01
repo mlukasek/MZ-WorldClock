@@ -15,6 +15,7 @@
 #define C_YELLOW 6
 #define C_WHITE 7
 
+extern const uint8_t txt_ascii[64];                  /* ASCII 20h-5Fh -> display code (gfx.asm too) */
 uint8_t txt_code(char c);                          /* ASCII -> display code */
 void txt_fill(uint8_t code, uint8_t attr);
 void txt_putc(uint8_t row, uint8_t col, uint8_t code, uint8_t attr);

@@ -21,11 +21,12 @@ extern struct machine mach;
 /* Test hook at 2003h (crt0.asm), written by the emulator tests */
 struct test_hook {
     char magic[4];       /* "WCTH" */
-    uint8_t flags;       /* bit 0: utc is valid, skip the time dialog */
+    uint8_t flags;       /* bit 0: utc is valid, skip the time dialog; bit 1: act as without the VRAM extension */
     uint32_t utc;
     uint8_t reserved[7];
 };
 #define TEST_TIME_VALID 1
+#define TEST_NO_EXTVRAM 2
 extern struct test_hook test_hook;
 
 void machine_init(void);

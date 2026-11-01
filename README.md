@@ -11,10 +11,21 @@ nikdy nenašel, předlohou jsou dobové fotky ([docs/zdroje.md](docs/zdroje.md))
 - **Jeden program pro všechny stroje:** Sharp MZ-700 v evropské (PAL) i japonské (NTSC) verzi, MZ-800 a MZ-1500.
   Program sám pozná, na čem běží.
 - **Historický vzhled** jako v inzerátu, s dnešními skutečnými časy včetně letního času.
-- **Moderní vzhled na MZ-800** v grafice 320×200: den a noc na mapě, domovské město a pásmo, velké digitální
-  a ručičkové hodiny. Přepíná se klávesou.
+- **Moderní vzhled na MZ-800** v grafice 320×200: mapa se dnem a nocí a domovským pásmem, velké digitální
+  a ručičkové hodiny. S rozšířením VRAM v 16 barvách, bez něj ve 4.
 - **Čas** z hodin karty Unicard, pokud je v počítači. Jinak se program na čas zeptá.
 - **Později port na SAPI-1** s kartou CGA-1V.
+
+## Ovládání
+
+| Klávesa | Co dělá |
+|---|---|
+| `T` | nastaví datum, čas a domovské pásmo |
+| `M` | prohodí kontinenty: Amerika vlevo, Evropa uprostřed (historický vzhled a mapa) |
+| `G` | jen MZ-800: historický vzhled → mapa → digitální hodiny → ručičkové hodiny → zpět |
+| `BREAK` | konec, návrat do monitoru s nastavenými hodinami |
+
+Program se nahrává od 1200h a startuje na 2000h.
 
 ## Překlad
 

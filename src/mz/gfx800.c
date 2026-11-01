@@ -1,14 +1,25 @@
-/* The MZ-800's own mode (see gfx800.h and docs/rozhodnuti.md "moderní vzhled").
+/* The MZ-800's own mode (see gfx800.h and docs/rozhodnuti.md "moderní vzhled", "hodiny").
  *
  * DMD (CEh) 00h: 320x200 in 4 colours from planes I and II, colour = plane II bit << 1 | plane I bit, through
- * the palette (F0h). IN (E0h) maps the VRAM at 8000h-9FFFh and the CG-ROM at 1000h-1FFFh; nothing of the
- * program is there (code and data 2000h-7FFFh, BSS at A000h, stack below C000h). In this mode the 8255 and
- * the 8253 are ports D0h-D7h (io_native). Drawing overwrites plane I, where MZ-700 mode keeps its CG-RAM and
- * text VRAM: the caller restores them after gfx_off(). */
+ * the palette (F0h). DMD 02h: 320x200 in 16 colours from planes I-IV (the VRAM extension); a colour whose
+ * planes III, IV match the palette group (0) goes through the palette, the others are IGRB as they are.
+ * IN (E0h) maps the VRAM at 8000h-9FFFh and the CG-ROM at 1000h-1FFFh; nothing used then is there (the main
+ * part of the program is at 2000h-7FFFh, the BSS at A000h, the stack below C000h; the cold part at 1200h-1FFFh
+ * is not called while mapped). In this mode the 8255 and the 8253 are ports D0h-D7h (io_native). Drawing
+ * overwrites plane I, where MZ-700 mode keeps its CG-RAM and text VRAM: gfx_end() leaves them cleared, the
+ * caller rebuilds the CG-RAM.
+ *
+ * The GDG's write formats (WF, CCh; mz800emu vramctrl): SINGLE / EXOR / OR / RESET write the selected planes,
+ * REPLACE writes the byte in the colour's planes and 0 in the others, PSET sets the pixels of the byte to the
+ * colour and leaves the rest. REPLACE and PSET work on planes I, II in the 4-colour mode, on all four in the
+ * 16-colour one, so the same drawing serves both. The text, span and line drawing is in gfx.asm. */
 #include <string.h>
 #include "gfx800.h"
 #include "hw.h"
-#include "text700.h"
+#include "machine.h"
+
+static const uint8_t pal_black[4] = {0x00, 0x10, 0x20, 0x30};
+static uint8_t ext_known;              /* 0 not yet tested, 1 no VRAM extension, 2 extension */
 
 void gfx_map(void)
 {
@@ -25,63 +36,82 @@ void gfx_wf(uint8_t wf)
     HW_OUT(0xCC, wf);
 }
 
-void gfx_on(const uint8_t *palette)
+static void palette(const uint8_t *p)
 {
     uint8_t i;
 
-    HW_OUT(0xCE, 0x00);                /* MZ-800 mode, 320x200, 4 colours, frame A */
-    io_native = 1;
-    IO_WR(R_CTC, 0x30);                /* counter 0 parked in mode 0: GATE0 is forced on in this mode */
-    IO_WR(R_CTC0, 0);
-    IO_WR(R_CTC0, 0);
     HW_OUT(0xF0, 0x40);                /* palette group 0 */
     for (i = 0; i < 4; ++i)
-        HW_OUT(0xF0, palette[i]);
-    HW_OUT_BC(0x06CF, 0x00);           /* border black */
-    HW_OUT_BC(0x01CF, 0x00);           /* scroll offset 0: no hardware scroll */
-    HW_OUT_BC(0x02CF, 0x00);
-    HW_OUT(0xCD, 0x01);                /* read format: plane I (not used) */
-    gfx_map();
-    gfx_wf(WF_BOTH);
-    memset((uint8_t *)GFX_VRAM, 0, 8000);
-    gfx_unmap();
+        HW_OUT(0xF0, p[i]);
 }
 
-void gfx_off(void)
+/* A black screen at once (the 4-colour mode with a black palette), then all four planes cleared; mapped */
+static void blank(void)
 {
+    palette(pal_black);
+    HW_OUT(0xCE, 0x00);
+    gfx_map();
+    gfx_wf(WF_SINGLE_ALL);
+    memset((uint8_t *)GFX_VRAM, 0, 0x2000);    /* 8 KB: also the MZ-700 mode's text VRAM and CG-RAM */
+}
+
+uint8_t gfx_begin(const uint8_t *pal4, const uint8_t *pal16)
+{
+    uint8_t ext;
+
+    if (!io_native) {                  /* from MZ-700 mode: its text screen goes dark first */
+        memset((uint8_t *)0xD800, 0, 1000);
+        blank();
+        io_native = 1;
+        IO_WR(R_CTC, 0x30);            /* counter 0 parked in mode 0: GATE0 is forced on in this mode */
+        IO_WR(R_CTC0, 0);
+        IO_WR(R_CTC0, 0);
+        HW_OUT_BC(0x06CF, 0x00);       /* border black */
+        HW_OUT_BC(0x01CF, 0x00);       /* scroll offset 0: no hardware scroll */
+        HW_OUT_BC(0x02CF, 0x00);
+    } else {
+        blank();
+    }
+    if (!ext_known) {                  /* planes III, IV read FFh without the extension */
+        ext_known = 1;
+        if (!(test_hook.flags & TEST_NO_EXTVRAM)) {
+            gfx_wf(0x04);              /* SINGLE, plane III */
+            HW_OUT(0xCD, 0x04);        /* read format: plane III */
+            GFX_VRAM[0] = 0x5A;
+            if (GFX_VRAM[0] == 0x5A) {
+                GFX_VRAM[0] = 0xA5;
+                if (GFX_VRAM[0] == 0xA5)
+                    ext_known = 2;
+            }
+            GFX_VRAM[0] = 0;
+        }
+    }
+    HW_OUT(0xCD, 0x01);                /* read format: plane I (not used) */
+    ext = pal16 && ext_known == 2;
+    HW_OUT(0xCE, ext ? 0x02 : 0x00);
+    palette(ext ? pal16 : pal4);
     gfx_unmap();
-    HW_OUT(0xCE, 0x08);                /* MZ-700 mode */
+    return ext;
+}
+
+void gfx_end(void)
+{
+    blank();
+    gfx_unmap();
+    HW_OUT(0xCE, 0x08);                /* MZ-700 mode: its text screen is all 0, i.e. black */
     HW_OUT(0xE4, 0x00);                /* ROM 0000h, VRAM D000h, I/O E000h */
     io_native = 0;
 }
 
+/* The shadow: the glyphs in colour 0 one pixel right and down (in the 4-colour mode the same as RESET of
+   planes I, II), then the glyphs in colour 3 (OR) */
 void gfx_text(uint8_t bx, uint8_t y, const char *s, uint8_t shadow)
 {
-    const uint8_t *g;
-    volatile uint8_t *v;
-    const char *c;
-    uint8_t k, r;
-
     if (shadow) {
-        gfx_wf(WF_RESET);
-        for (c = s, k = bx; *c; ++c, ++k) {
-            g = GFX_CGROM + (uint16_t)txt_code(*c) * 8;
-            v = GFX_VRAM + (uint16_t)(y + 1) * 40 + k;
-            for (r = 0; r < 8; ++r, v += 40) {
-                v[0] = g[r] << 1;
-                if (k < 39)
-                    v[1] = g[r] >> 7;
-            }
-        }
-        gfx_wf(WF_OR);
+        gfx_ptext((uint16_t)bx * 8 + 1, y + 1, s, 0);
+        gfx_ptext((uint16_t)bx * 8, y, s, 3);
     } else {
-        gfx_wf(WF_BOTH);
-    }
-    for (c = s, k = bx; *c; ++c, ++k) {
-        g = GFX_CGROM + (uint16_t)txt_code(*c) * 8;
-        v = GFX_VRAM + (uint16_t)y * 40 + k;
-        for (r = 0; r < 8; ++r, v += 40)
-            *v = g[r];
+        gfx_ctext(bx, y, s, 3, 1, 1);
     }
 }
 

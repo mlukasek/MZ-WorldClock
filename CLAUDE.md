@@ -55,5 +55,6 @@ Autor: Martin Lukášek. Komunikace **česky**.
 - **Každá změna:**
   - `cmd /c build.cmd`;
   - `python tests/emu/run_wc.py`, `--dialog` a `--native-boot` na všech emulovaných strojích;
+  - `python tests/emu/run_modern.py` (mapa a hodiny MZ-800 bajt po bajtu proti `tools/modref.py`, `tools/clockref.py`);
   - po změně jádra času `python tests/core/run_core.py`;
   - po změně časové základny i `--drift 60`.

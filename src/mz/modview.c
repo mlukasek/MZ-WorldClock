@@ -37,7 +37,7 @@ static uint32_t shown_minute;
 static uint8_t shown_sec, shown_mday;
 static uint8_t pl1[40], pl2[40];
 static uint8_t zmask[3][MOD_ZONE_W / 8];
-static char buf[16];
+char mod_text[16];
 /* the border cells of the home zone (cell column), cell row by cell row; computed once per home zone */
 static uint8_t border_cx[MOD_BORDER_MAX];
 static uint16_t border_start[MOD_ZONE_H + 1];
@@ -214,17 +214,80 @@ static uint8_t interval(uint8_t y)
     return 1;
 }
 
-static void clock_text(uint8_t i, wc_time_t utc)
+static char *two(char *p, uint8_t v)
+{
+    p[0] = '0' + v / 10;
+    p[1] = '0' + v % 10;
+    return p + 2;
+}
+
+const char *mod_city_hm(uint8_t i, wc_time_t utc)
 {
     struct wc_tm tm;
 
     wc_split(wc_to_local(utc, mod_cities[i].std_minutes, mod_cities[i].dst), &tm);
-    buf[0] = '0' + tm.hour / 10;
-    buf[1] = '0' + tm.hour % 10;
-    buf[2] = ':';
-    buf[3] = '0' + tm.min / 10;
-    buf[4] = '0' + tm.min % 10;
-    buf[5] = 0;
+    two(mod_text, tm.hour);
+    mod_text[2] = ':';
+    two(mod_text + 3, tm.min);
+    mod_text[5] = 0;
+    return mod_text;
+}
+
+const char *mod_date_text(const struct wc_tm *tm)
+{
+    memcpy(mod_text, day_name[tm->wday], 3);
+    mod_text[3] = ' ';
+    two(mod_text + 4, tm->day);
+    mod_text[6] = '.';
+    two(mod_text + 7, tm->month);
+    mod_text[9] = '.';
+    two(mod_text + 10, tm->year / 100);
+    two(mod_text + 12, tm->year % 100);
+    mod_text[14] = 0;
+    return mod_text;
+}
+
+uint8_t mod_offset_text(int16_t off)
+{
+    uint8_t k = 3;
+
+    memcpy(mod_text, "UTC", 3);
+    mod_text[k++] = off < 0 ? '-' : '+';
+    if (off < 0)
+        off = -off;
+    if (off / 60 >= 10)
+        mod_text[k++] = '0' + off / 600;
+    mod_text[k++] = '0' + (off / 60) % 10;
+    if (off % 60) {
+        mod_text[k++] = ':';
+        two(mod_text + k, off % 60);
+        k += 2;
+    }
+    mod_text[k] = 0;
+    return k;
+}
+
+void mod_sun(wc_time_t utc)
+{
+    sun(utc);
+}
+
+uint8_t mod_day_at(uint16_t x, uint8_t sy)
+{
+    uint8_t h = half[sy - MOD_MAP_Y];
+    int16_t s;
+
+    if (h >= W / 2)
+        return 1;
+    if (!h)
+        return 0;
+    s = (int16_t)(x16 >> 4) - h;
+    if (s < 0)
+        s += W;
+    s = (int16_t)x - s;
+    if (s < 0)
+        s += W;
+    return (uint16_t)s < 2 * h;
 }
 
 static void marker(uint16_t x, uint8_t y, uint8_t big, uint8_t y0, uint8_t y1, uint8_t c0, uint8_t c1)
@@ -316,8 +379,7 @@ static void render(uint8_t y0, uint8_t y1, uint8_t c0, uint8_t c1)
         if (y + 18 <= sy0 || y >= sy1 || bx + c + 1 <= c0 || bx >= c1)
             continue;
         gfx_text(bx, y, ct->name, 1);
-        clock_text(i, (wc_time_t)shown_minute * 60);
-        gfx_text(bx, y + 8, buf, 1);
+        gfx_text(bx, y + 8, mod_city_hm(i, (wc_time_t)shown_minute * 60), 1);
     }
 }
 
@@ -325,76 +387,43 @@ static void home_line(wc_time_t utc)
 {
     const struct wc_zone *w = &wc_zones[home];
     struct wc_tm tm;
-    int16_t off;
     uint8_t n, k;
 
     wc_split(wc_to_local(utc, w->std_minutes, w->dst), &tm);
-    memset(buf, ' ', 10);
+    memset(mod_text, ' ', 10);
     n = (uint8_t)strlen(w->name);
-    memcpy(buf, w->name, n);
-    buf[10] = 0;
-    gfx_text(0, MOD_HOME_Y, buf, 0);
-    buf[0] = ' ';
-    buf[1] = '0' + tm.hour / 10;
-    buf[2] = '0' + tm.hour % 10;
-    buf[3] = ':';
-    buf[4] = '0' + tm.min / 10;
-    buf[5] = '0' + tm.min % 10;
-    buf[6] = ':';
-    buf[7] = '0' + tm.sec / 10;
-    buf[8] = '0' + tm.sec % 10;
-    buf[9] = 0;
-    gfx_text(10, MOD_HOME_Y, buf, 0);
-    off = wc_offset(utc, w->std_minutes, w->dst);
-    memset(buf, ' ', 8);
-    k = 0;
-    buf[k++] = 'U';
-    buf[k++] = 'T';
-    buf[k++] = 'C';
-    buf[k++] = off < 0 ? '-' : '+';
-    if (off < 0)
-        off = -off;
-    if (off / 60 >= 10)
-        buf[k++] = '0' + off / 600;
-    buf[k++] = '0' + (off / 60) % 10;
-    if (off % 60) {
-        buf[k++] = ':';
-        buf[k++] = '0' + (off % 60) / 10;
-        buf[k++] = '0' + off % 10;
-    }
-    /* right-aligned in 8 characters at byte column 32 */
-    memmove(buf + 8 - k, buf, k);
-    memset(buf, ' ', 8 - k);
-    buf[8] = 0;
-    gfx_text(32, MOD_HOME_Y, buf, 0);
+    memcpy(mod_text, w->name, n);
+    mod_text[10] = 0;
+    gfx_text(0, MOD_HOME_Y, mod_text, 0);
+    mod_text[0] = ' ';
+    two(mod_text + 1, tm.hour);
+    mod_text[3] = ':';
+    two(mod_text + 4, tm.min);
+    mod_text[6] = ':';
+    two(mod_text + 7, tm.sec);
+    mod_text[9] = 0;
+    gfx_text(10, MOD_HOME_Y, mod_text, 0);
+    /* the offset right-aligned in 8 characters at byte column 32 */
+    k = mod_offset_text(wc_offset(utc, w->std_minutes, w->dst));
+    memmove(mod_text + 8 - k, mod_text, k);
+    memset(mod_text, ' ', 8 - k);
+    mod_text[8] = 0;
+    gfx_text(32, MOD_HOME_Y, mod_text, 0);
     /* the date in the title row: DAY DD.MM.YYYY at byte column 26 */
     if (tm.day != shown_mday) {
         shown_mday = tm.day;
-        memcpy(buf, day_name[tm.wday], 3);
-        buf[3] = ' ';
-        buf[4] = '0' + tm.day / 10;
-        buf[5] = '0' + tm.day % 10;
-        buf[6] = '.';
-        buf[7] = '0' + tm.month / 10;
-        buf[8] = '0' + tm.month % 10;
-        buf[9] = '.';
-        buf[10] = '0' + tm.year / 1000;
-        buf[11] = '0' + (tm.year / 100) % 10;
-        buf[12] = '0' + (tm.year / 10) % 10;
-        buf[13] = '0' + tm.year % 10;
-        buf[14] = 0;
-        gfx_text(26, 0, buf, 0);
+        gfx_text(26, 0, mod_date_text(&tm), 0);
     }
 }
 
 /* The seconds bar: 4 pixels per second, full in the last second of the minute (colour 3, 4 rows) */
-static void seconds_bar(uint8_t sec)
+void mod_bar(uint8_t sec, uint8_t colour)
 {
     uint8_t r, c;
     uint16_t end = MOD_BAR_X + 4 * (sec + 1);
     volatile uint8_t *v;
 
-    gfx_wf(WF_BOTH);
+    gfx_wf(WF_REPLACE(colour));
     for (r = 0; r < 4; ++r) {
         v = GFX_VRAM + (uint16_t)(MOD_BAR_Y + r) * 40;
         for (c = MOD_BAR_X >> 3; c < ((MOD_BAR_X + 240) >> 3); ++c) {
@@ -408,13 +437,13 @@ static void seconds_bar(uint8_t sec)
     }
 }
 
-static void ruler(void)
+void mod_ruler(uint8_t colour)
 {
     uint8_t c, k, y;
     uint16_t x;
     volatile uint8_t *v;
 
-    gfx_wf(WF_PLANE_II);                       /* colour 2: plane II (plane I is 0 there) */
+    gfx_wf(WF_REPLACE(colour));
     memset(pl2, 0, 40);
     set_bits(pl2, MOD_BAR_X - 1, 241);         /* the line, x 31-271 */
     v = GFX_VRAM + 199 * 40;
@@ -446,7 +475,7 @@ void mod_enter(uint8_t h, uint8_t view, wc_time_t utc)
 
     home = h;
     shift = view ? MOD_ATL_SHIFT / 8 : 0;
-    gfx_on(mod_palette);
+    gfx_begin(mod_palette, 0);
     gfx_map();
     gfx_text(0, 0, "*** WORLD CLOCK ***", 0);
     border_build();
@@ -455,19 +484,14 @@ void mod_enter(uint8_t h, uint8_t view, wc_time_t utc)
     for (y = 0; y < MOD_MAP_H; ++y)
         interval(y);
     render(0, MOD_MAP_H, 0, 40);
-    ruler();
+    mod_ruler(2);
     shown_mday = 0;
     home_line(utc);
     shown_sec = (uint8_t)(utc % 60);
-    seconds_bar(shown_sec);
+    mod_bar(shown_sec, 3);
     memset(dirty, 0, sizeof(dirty));
     dirty_clocks = 0;
     gfx_unmap();
-}
-
-void mod_leave(void)
-{
-    gfx_off();
 }
 
 void mod_update(wc_time_t utc)
@@ -502,7 +526,7 @@ void mod_update(wc_time_t utc)
     if (sec != shown_sec) {
         shown_sec = sec;
         home_line(utc);
-        seconds_bar(sec);
+        mod_bar(sec, 3);
     }
     gfx_unmap();
 }

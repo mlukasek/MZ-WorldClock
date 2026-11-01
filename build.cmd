@@ -1,7 +1,6 @@
 @echo off
 rem Build of MZ-WorldClock for the Sharp MZ-700 (EU, JP) and MZ-800 (docs\vyvoj.md):
 rem   build.cmd            build\worldclock.mzf (load 1200h, exec 2000h) with zsdcc
-rem   build.cmd sccz80     the same with sccz80 (does not fit any more: only to compare the compilers)
 rem Needs z88dk nightly (Z88DK, default E:\SHARP_GIT\Tools\z88dk-nightly) and Python 3.
 setlocal
 cd /d "%~dp0"
@@ -9,7 +8,6 @@ if "%Z88DK%"=="" set Z88DK=E:\SHARP_GIT\Tools\z88dk-nightly
 set PATH=%Z88DK%\bin;%PATH%
 set ZCCCFG=%Z88DK%\lib\config
 set COMP=-compiler=sdcc
-if /i "%1"=="sccz80" set COMP=
 if not exist build\gen mkdir build\gen
 
 python tools\mkhistoric.py data\historic.txt build\gen || exit /b 1
@@ -18,15 +16,14 @@ python tools\mkmodern.py build\gen || exit /b 1
 
 rem zsdcc optimised for size (docs\rozhodnuti.md: the main part must end below 8000h, the cold one below 2000h)
 if "%ZOPT%"=="" set ZOPT=-SO3 --opt-code-size --max-allocs-per-node200000
-if /i "%1"=="sccz80" if "%ZOPT%"=="-SO3 --opt-code-size --max-allocs-per-node200000" set ZOPT=-O2
 zcc +mz %COMP% %ZOPT% -m -crt0=src\mz\crt0.asm ^
   -pragma-define:CRT_ENABLE_STDIO=0 -pragma-define:CLIB_OPEN_MAX=0 ^
   -Isrc\core -Isrc\mz -Ibuild\gen -o build\worldclock.bin ^
   src\mz\main.c src\mz\machine.c src\mz\timebase.c src\mz\kbd.c src\mz\text700.c src\mz\histview.c ^
   src\mz\setup.c src\mz\rtc_unicard.c src\mz\rtcsync.c src\mz\cgram.c src\mz\pcg1500.c ^
-  src\mz\gfx800.c src\mz\modview.c ^
+  src\mz\gfx800.c src\mz\modview.c src\mz\clockview.c ^
   src\core\wctime.c src\core\zones.c build\gen\historic.c build\gen\glyphs.c build\gen\modern.c ^
-  src\mz\hw.asm || exit /b 1
+  src\mz\hw.asm src\mz\gfx.asm || exit /b 1
 
 python tools\mkmzf.py build\worldclock.bin build\worldclock.mzf --name "WORLD CLOCK" ^
   --cold build\worldclock_code_cold.bin@1200 || exit /b 1

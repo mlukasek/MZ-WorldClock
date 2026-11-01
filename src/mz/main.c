@@ -2,8 +2,8 @@
  *
  * Start: detect the machine, start the time base, get the time (the test hook, the Unicard RTC or the
  * dialog), then the historic screen, one pass per frame. T sets the time again, M swaps the continents
- * (Americas on the left), G switches the MZ-800 between the historic and the modern look, BREAK returns to
- * the monitor with its clock set. */
+ * (Americas on the left), G goes round the MZ-800's looks (historic, map, digital clock, analog clock; each
+ * through a black screen), BREAK returns to the monitor with its clock set. */
 #include "machine.h"
 #include "timebase.h"
 #include "kbd.h"
@@ -16,15 +16,22 @@
 #include "cgram.h"
 #include "pcg1500.h"
 #include "modview.h"
+#include "clockview.h"
+#include "gfx800.h"
+
+#define LOOK_HISTORIC 0
+#define LOOK_MAP 1
+#define LOOK_DIGITAL 2
+#define LOOK_ANALOG 3
 
 static uint8_t home;
-static uint8_t modern;               /* the MZ-800's modern look is on */
+static uint8_t look;                 /* LOOK_...; only the MZ-800 leaves the historic one */
 
-/* Back to the text screen of MZ-700 mode (from the modern look: its CG-RAM is rebuilt) */
+/* Back to the text screen of MZ-700 mode (from the MZ-800 mode: a black screen, its CG-RAM rebuilt) */
 static void look_text(void)
 {
-    if (modern) {
-        mod_leave();
+    if (look != LOOK_HISTORIC) {
+        gfx_end();
         cgram_restore();
         cgram_load();
     }
@@ -33,8 +40,10 @@ static void look_text(void)
 /* Draw the current look and view from scratch */
 static void look_draw(wc_time_t utc)
 {
-    if (modern)
+    if (look == LOOK_MAP)
         mod_enter(home, hist_view, utc);
+    else if (look != LOOK_HISTORIC)
+        clk_enter(look == LOOK_ANALOG, home, utc);
     else
         hist_draw();
 }
@@ -75,8 +84,10 @@ int main(void)
     for (;;) {
         tb_wait_frame();
         now = clock_now(&frac);
-        if (modern)
+        if (look == LOOK_MAP)
             mod_update(now);
+        else if (look != LOOK_HISTORIC)
+            clk_update(now);
         else
             hist_update(now, frac < tb_line_hz / 2);
         rtc_poll(now, home);
@@ -87,12 +98,13 @@ int main(void)
             look_text();
             setup_run(&home, 1);
             look_draw(clock_now(&frac));
-        } else if (key == 'M') {
+        } else if (key == 'M' && look <= LOOK_MAP) {
             hist_view ^= 1;
             look_draw(now);
         } else if (key == 'G' && mach.model == MODEL_MZ800) {
-            look_text();
-            modern ^= 1;
+            if (look == LOOK_ANALOG)
+                look_text();         /* the other changes go from black to black in gfx_begin */
+            look = (look + 1) & 3;
             look_draw(now);
         }
     }
