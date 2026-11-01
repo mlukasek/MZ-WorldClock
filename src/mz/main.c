@@ -12,6 +12,7 @@
 #include "wctime.h"
 #include "rtcsync.h"
 #include "rtc_unicard.h"
+#include "cgram.h"
 
 static uint8_t home;
 
@@ -25,6 +26,11 @@ int main(void)
 
     machine_init();
     tb_init(mach.line_hz);
+    if (mach.model == MODEL_MZ800) {
+        cgram_load();                /* the hiragana title and the half cell of the bar */
+        hist_hiragana = 1;
+        hist_fine = 1;
+    }
     home = mach.jp ? ZONE_TOKYO : ZONE_PRAGUE;
 
     rtc_present = rtc_detect();

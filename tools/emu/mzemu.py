@@ -193,6 +193,20 @@ class Emu:
         for i in range(0, len(data), 256):
             self.call('mem_write', {'addr': addr + i, 'data_hex': bytes(data[i:i + 256]).hex()})
 
+    def region(self, kind, offset, length, sub_id=0):
+        """Bytes of an emulator memory region by its kind ('cgram_700', 'cgrom', 'vram_phys_plane', ...)."""
+        if not hasattr(self, '_regions'):
+            r = self.call('regions_list')
+            self._regions = {(g['kind'], g['sub_id']): g['id'] for g in (r.get('regions') or r)}
+        out = bytearray()
+        while length > 0:
+            n = min(length, 1024)
+            d = self.call('region_read', {'region_id': self._regions[(kind, sub_id)], 'offset': offset, 'length': n})
+            out += base64.b64decode(d['data_b64'])
+            offset += n
+            length -= n
+        return bytes(out)
+
     def raster(self):
         return self.call('get_raster_pos')
 

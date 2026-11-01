@@ -20,8 +20,12 @@ sys.path.insert(0, os.path.join(ROOT, 'tools', 'emu'))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 from mzemu import Emu, load_map, ASCII_TO_DISPLAY  # noqa: E402
 import mkhistoric  # noqa: E402
+import mkglyphs  # noqa: E402
 
 EPOCH = datetime(2000, 1, 1, tzinfo=timezone.utc)
+# own glyphs: the MZ-800 (CG-RAM: hiragana title, 1 s bar steps)
+FINE = {'mz800'}
+HIRAGANA = {'mz800'}
 MACHINES = {  # name: (executable, ROM, jp, ntsc, model)
     'eu': ('mz700emu-pal.exe', 'EU', 0, 0, 0),
     'jp': ('mz700emu-ntsc.exe', 'JP', 1, 1, 0),
@@ -38,11 +42,11 @@ def disp(text):
     return bytes(ASCII_TO_DISPLAY[c] for c in text)
 
 
-def check_screen(emu, data, utc, jp, errs, view='pacific'):
+def check_screen(emu, data, utc, jp, errs, view='pacific', fine=False):
     """The whole screen against the data: the static part of `view` (map, names, title, ruler), the clocks
     at the view's places in the time `utc` (zoneinfo), the seconds bar."""
     chars, attrs = emu.text_dump()
-    want = mkhistoric.compose(data, 'JP' if jp else 'EU', view)
+    want = mkhistoric.compose(data, 'JP' if jp else 'EU', view)   # jp: the hiragana title
     clocks = mkhistoric.clock_positions(data, view)
     skip = set()
     for row, col in clocks:
@@ -59,11 +63,22 @@ def check_screen(emu, data, utc, jp, errs, view='pacific'):
             errs.append('%s view, %s: %s want %02d:%02d' % (view, name, chars[p:p + 5].hex(), local.hour, local.minute))
         if attrs[p] != 0x60:
             errs.append('%s: attribute %02X' % (name, attrs[p]))
-    bar = chars[brow * 40 + bcol:brow * 40 + bcol + bcells]
-    n = len(bar.rstrip(b'\x00'))
-    want_n = (utc.second + 1) // 2
-    if bar[:n] != bytes([bcode]) * n or abs(n - want_n) > 1:
-        errs.append('bar: %d cells, want about %d' % (n, want_n))
+    halves, state = 0, 0
+    for k in range(bcells):
+        c, a = chars[brow * 40 + bcol + k], attrs[brow * 40 + bcol + k]
+        if c == bcode and a == 0x30 and state == 0:
+            halves += 2
+        elif c == bcode and a == 0xB0 and state == 0:
+            halves += 1
+            state = 1
+        elif c == 0x00:
+            state = 1
+        else:
+            errs.append('bar cell %d: %02X/%02X' % (k, c, a))
+            break
+    want_h = utc.second + 1 if fine else (utc.second + 1) & ~1
+    if abs(halves - want_h) > 2 or (not fine and halves % 2):
+        errs.append('bar: %d halves, want about %d' % (halves, want_h))
 
 
 def program_time(emu, syms):
@@ -115,15 +130,22 @@ def run_machine(name, utc0, dialog, mzf, syms, data, native=False):
         want_lines = 262 if ntsc else 312
         if got[:3] != (model, jp, ntsc) or got[3] != want_lines or got[4] != (15700 if ntsc else 15611):
             errs.append('detection %s, want model %d jp %d ntsc %d lines %d' % (got, model, jp, ntsc, want_lines))
-        check_screen(emu, data, utc, jp, errs)
+        hira, fine = jp or name in HIRAGANA, name in FINE
+        check_screen(emu, data, utc, hira, errs, fine=fine)
+        if name in HIRAGANA:                           # the own glyphs in the CG-RAM
+            cgram = emu.region('cgram_700', 0, 4096)
+            for g in mkglyphs.parse(os.path.join(ROOT, 'data', 'glyphs.txt')):
+                o = (g['set'] * 256 + g['code']) * 8
+                if list(cgram[o:o + 8]) != g['rows']:
+                    errs.append('CG-RAM glyph %s: %s' % (g['name'], cgram[o:o + 8].hex()))
         emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s%s%s.png' % (name, '-dialog' if dialog else '',
                                                                        '-native' if native else '')))
         if not dialog:                                  # M: the continents swapped, M again: back
             emu.key('M', 3, 20)
-            check_screen(emu, data, program_time(emu, syms), jp, errs, 'atlantic')
+            check_screen(emu, data, program_time(emu, syms), hira, errs, 'atlantic', fine)
             emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s-atlantic.png' % name))
             emu.key('M', 3, 20)
-            check_screen(emu, data, program_time(emu, syms), jp, errs, 'pacific')
+            check_screen(emu, data, program_time(emu, syms), hira, errs, 'pacific', fine)
         emu.key('BREAK', 5, 30)
         pc = emu.regs().get('PC', emu.regs().get('pc'))
         if pc is None or pc >= 0x1000:
@@ -131,6 +153,8 @@ def run_machine(name, utc0, dialog, mzf, syms, data, native=False):
         chars = emu.text_dump()[0]
         if any(c not in (0x00, 0x6B) for c in chars[40:]):   # cleared, the monitor prompt '*' at the top
             errs.append('screen not cleared after BREAK')
+        if name in HIRAGANA and emu.region('cgram_700', 0, 4096) != emu.region('cgrom', 0, 4096):
+            errs.append('CG-RAM not restored after BREAK')
     return errs
 
 
@@ -179,7 +203,7 @@ def run_rtc(name, mzf, syms, data):
         if abs((got - want).total_seconds()) > 3:
             errs.append('clock %s, the card says %s' % (got.isoformat(), want.isoformat()))
         if 3 <= got.second <= 57:                               # not at a minute change
-            check_screen(emu, data, got, jp, errs)
+            check_screen(emu, data, got, jp or name in HIRAGANA, errs, fine=name in FINE)
         emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s-rtc.png' % name))
     return errs
 

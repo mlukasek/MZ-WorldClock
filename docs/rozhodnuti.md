@@ -151,3 +151,20 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   - TOKYO a SYDNEY by přetekly přes okraj, mají vlastní místo (sekce `[atlantic]` v `data/historic.txt`).
   - `tools/mkhistoric.py` kontroluje, že nic nepřetéká a nic se nepřekrývá.
 - **Přepínání historického a moderního vzhledu na MZ-800** proto nebude na M, ale na **G** (grafika).
+
+## 2026-11-01: vlastní znaky na MZ-800 (CG-RAM)
+
+- **Znaky jsou v `data/glyphs.txt`**, vlastní kresba 8×8 (GPL), ne kopie znakového generátoru Sharp. Tabulku
+  z nich dělá `tools/mkglyphs.py`.
+- **Pruh v krocích po 1 s** (autor): půlka znaku 3Ah, tedy jeho levá spodní čtvrtina.
+  - Je na stejném kódu 3Ah v sadě 1, půlbuňka je pak tentýž znak s bitem 7 atributu.
+  - Pruh vypadá stejně jako na fotkách, jen plynuleji.
+  - MZ-700 zůstává u kroku 2 s.
+- **Hiragana titulku na MZ-800** (せ か い と ゛ け): na kódech sady 1 jako v japonském CG-ROM, takže MZ-800 bere
+  japonský titulek z dat beze změny.
+- **Nahrání do CG-RAM:**
+  - `IN (E0h)` v režimu MZ-700 mapuje CG-ROM na 1000h a CG-RAM na C000h, `IN (E1h)` je odmapuje;
+  - na konci programu se CG-RAM znovu zkopíruje z CG-ROM, jako to dělá IPL;
+  - test to ověřuje přes regiony emulátoru `cgram_700` a `cgrom`.
+- **Pruh se počítá v půlkách buňky:** jemný režim `s+1`, hrubý `(s+1) & ~1`. V obou je plný v poslední sekundě minuty
+  a jemný je vždy aspoň tak dlouhý jako hrubý.
