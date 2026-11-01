@@ -1,6 +1,6 @@
 # Vývoj
 
-## Stav (2026-11-01)
+## Stav (2026-11-01, v1.0)
 
 - **Fáze 0 (založení) hotová:**
   - repo, dokumentace, nástroje pro emulátor;
@@ -23,8 +23,10 @@
   - **Místo:** pod 8000h zbývá asi 1,2 KB, studená část má rezervu asi 145 B.
 - **Po fázi 5 podle autora:** mapa v 16 barvách, kulatý ciferník, ovládání mezerníkem, šipkami a CR s nápovědou
   po startu, titulek podle pohledu, vycentrovaný atlantický pohled, opravené lupnutí.
-- **Fáze 6 (reálný HW, README, release):** na reálném HW otestováno, funguje ([hw-otazky.md](hw-otazky.md)).
-  Další krok je README se snímky a release MZF.
+- **Fáze 6 (reálný HW, README, release) hotová:** na reálném HW otestováno ([hw-otazky.md](hw-otazky.md)),
+  README se snímky (`tools/screenshots.py`), release
+  [v1.0](https://github.com/mlukasek/MZ-WorldClock/releases/tag/v1.0) s `worldclock.mzf`.
+- **Další krok:** podle autora; později port na SAPI-1 (fáze 7).
 
 ## Plán vývoje
 
@@ -39,7 +41,7 @@
    - prototyp moderní mapy jako PNG ke schválení;
    - grafika 320×200, mapa z Natural Earth, den a noc, domovské pásmo, přepínání `G`. **Hotovo.**
 5. **Velké digitální a ručičkové hodiny.** **Hotovo.**
-6. **Reálný HW (autor), README se snímky, release MZF.** Reálný HW hotový.
+6. **Reálný HW (autor), README se snímky, release MZF.** **Hotovo**, release v1.0.
 7. **Později port na SAPI-1** (CGA-1V, hodiny DPI na B0h/B1h, `zcc +cpm`).
 
 ## Nástroje
