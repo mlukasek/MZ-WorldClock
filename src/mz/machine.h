@@ -4,8 +4,9 @@
 
 #include <stdint.h>
 
-#define MODEL_MZ700 0
-#define MODEL_MZ800 1
+#define MODEL_MZ700 0        /* and anything MZ-700 compatible without the MZ-800's GDG */
+#define MODEL_MZ800 1        /* GDG present: the modern look in 320x200 is possible */
+#define MODEL_MZ1500 2       /* Japanese, NTSC, MZ-700 compatible; has a PCG (not used yet) */
 
 struct machine {
     uint8_t model;       /* MODEL_... */

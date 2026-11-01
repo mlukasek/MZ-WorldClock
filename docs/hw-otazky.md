@@ -2,6 +2,14 @@
 
 Reálné stroje má autor. U každé otázky je, proč na ní záleží.
 
+## Výsledky (autor, 2026-11-01)
+
+- **MZ-800 (reálný):** program běží v obou polohách přepínače SW1.
+  - Spuštěno z Unicard Manageru a z manažeru UniCMT, ne z kazety. Start z kazety zatím neověřen.
+  - Čas z Unicard RTC se bere správně.
+- **MZ-1500 (emulátor):** běží, titulek v hiraganě.
+- **Japonský MZ-700 fyzicky:** zatím nezkoušeno.
+
 ## MZ-700
 
 1. **Co vrací `IN A,(CEh)` na MZ-700?** Plovoucí sběrnice, FFh, nebo něco jiného? Je to druhá kontrola detekce MZ-800.
@@ -16,11 +24,13 @@ Reálné stroje má autor. U každé otázky je, proč na ní záleží.
 4. **Polarita bitu 6 na portu CEh (/VBLN)** na reálném stroji, a jestli jde souběžně s PC7 8255.
 5. **Stav po startu přepínačem SW1 v režimu MZ-800** (nativní IPL): nahraje se MZF z kazety či Unicard, a program
    se správně přepne do režimu MZ-700?
+   - Z Unicard Manageru a UniCMT ano. Z kazety neověřeno.
 6. **4barevný režim 320×200 bez rozšíření VRAM:** emulátor má rozšíření vždy.
 
 ## Unicard
 
 7. **Která verze firmwaru je v kartě**, a vrací příkazy 62h/63h (RTC) platné hodnoty? V jakém stavu je stavový bajt?
+   - Čtení času funguje (MZ-800). Verze firmwaru nezjištěna.
 8. **Jak se RTC nastavuje** (web, shell, CP/M utility) a jestli drží čas i po vypnutí (baterie).
 9. **Zápis času z dialogu (příkazy 61h, 60h):** přijme ho karta, zůstane po vypnutí a čte se pak zpět správně?
    - Emulátor zápis neumí, je to ověřené jen proti dokumentaci firmwaru.

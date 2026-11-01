@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Vzkříšení dema světových hodin „SHARP せかいどけい“ z inzerátů a katalogů Sharp MZ-700 (1982–83). Originál se
 nenašel, předlohou jsou dobové fotky ([docs/zdroje.md](docs/zdroje.md)).
 
-- **Jeden MZF** pro MZ-700 EU (PAL, 1Z-013A), MZ-700 JP (NTSC, 1Z-009, japonský CG-ROM) a MZ-800. Stroj se pozná
-  za běhu.
+- **Jeden MZF** pro MZ-700 EU (PAL, 1Z-013A), MZ-700 JP (NTSC, 1Z-009, japonský CG-ROM), MZ-800 a MZ-1500 (jako
+  japonský MZ-700). Stroj se pozná za běhu. MZ-800 podle GDG, ne podle ROM.
 - **Historický vzhled** v textovém režimu MZ-700 na všech strojích. **Moderní vzhled** v grafice 320×200 jen na MZ-800.
 - **Čas** z Unicard RTC (místní čas), jinak se zadá.
 - **Později port na SAPI-1** (CGA-1V).

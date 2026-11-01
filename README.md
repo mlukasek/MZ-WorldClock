@@ -8,8 +8,8 @@ nikdy nenašel, předlohou jsou dobové fotky ([docs/zdroje.md](docs/zdroje.md))
 
 ## Cíl
 
-- **Jeden program pro všechny stroje:** Sharp MZ-700 v evropské (PAL) i japonské (NTSC) verzi a MZ-800. Program sám
-  pozná, na čem běží.
+- **Jeden program pro všechny stroje:** Sharp MZ-700 v evropské (PAL) i japonské (NTSC) verzi, MZ-800 a MZ-1500.
+  Program sám pozná, na čem běží.
 - **Historický vzhled** jako v inzerátu, s dnešními skutečnými časy včetně letního času.
 - **Moderní vzhled na MZ-800** v grafice 320×200: den a noc na mapě, domovské město a pásmo, velké digitální
   a ručičkové hodiny. Přepíná se klávesou.

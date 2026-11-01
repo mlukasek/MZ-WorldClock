@@ -1,6 +1,6 @@
 """Run build/worldclock.mzf on the emulated machines and check what it shows.
 
-    python tests/emu/run_wc.py [--machine eu|jp|eu-ntsc|mz800|all] [--utc 2026-11-01T15:00:10] [--dialog]
+    python tests/emu/run_wc.py [--machine eu|jp|eu-ntsc|mz800|mz1500|all] [--utc 2026-11-01T15:00:10] [--dialog]
 
 For each machine: load the MZF, put the UTC time into the test hook (2003h, skips the dialog), run 2 s,
 then check the detected machine, the title, every city's HH:MM (against Python's zoneinfo; needs the tzdata
@@ -27,6 +27,7 @@ MACHINES = {  # name: (executable, ROM, jp, ntsc, model)
     'jp': ('mz700emu-ntsc.exe', 'JP', 1, 1, 0),
     'eu-ntsc': ('mz700emu-ntsc.exe', 'EU', 0, 1, 0),
     'mz800': ('mz800emu.exe', None, 0, 0, 1),
+    'mz1500': ('mz1500emu.exe', None, 1, 1, 2),
 }
 TZ = {'MOSCOW': 'Europe/Moscow', 'PARIS': 'Europe/Paris', 'PEKIN': 'Asia/Shanghai',
       'L.ANGELS': 'America/Los_Angeles', 'TOKYO': 'Asia/Tokyo', 'WASHINGTON': 'America/New_York',

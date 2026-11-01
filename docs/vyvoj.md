@@ -46,6 +46,7 @@ Emulované stroje (`tools/emu/mzemu.py`, `Emu(exe, rom=..., unicard=...)`):
 | MZ-700 JP | `mz700emu-ntsc.exe` | `rom='JP'` (1Z-009B, JP CG-ROM) |
 | MZ-700 EU NTSC (kontrola měření PAL/NTSC) | `mz700emu-ntsc.exe` | `rom='EU'` |
 | MZ-800 | `mz800emu.exe` | po resetu v režimu MZ-700 |
+| MZ-1500 | `mz1500emu.exe` | japonský monitor (hlavička 1Z-009B), NTSC |
 
 `mzemu.py` píše vlastní ini do `build/emu/<exe>.ini` a emulátor spouští s `--no-save-ini`. Ve složce emulátoru se
 nic nemění.
@@ -55,7 +56,7 @@ nic nemění.
 | Soubor | Co dělá |
 |---|---|
 | `src/mz/crt0.asm` | start na 2000h: `JP start`, testovací blok na 2003h, DI, SP 8000h, BSS A000h |
-| `src/mz/machine.c` | detekce (signatura ROM, počet řádků), přepnutí MZ-800 do režimu MZ-700, konec do monitoru s nastavenými hodinami (TIMST) |
+| `src/mz/machine.c` | detekce (signatura ROM, GDG přes port CEh, počet řádků), přepnutí MZ-800 do režimu MZ-700, konec do monitoru s nastavenými hodinami (TIMST) |
 | `src/mz/timebase.c` | CTC1 1 Hz z HSYNC, CTC2 čítač sekund, `clock_set` / `clock_now`, čekání na VBLK |
 | `src/mz/kbd.c` | matice klávesnice přes 8255 |
 | `src/mz/text700.c` | textová obrazovka, ASCII → kód displeje |
@@ -86,7 +87,7 @@ nic nemění.
 
 - **Program:** `build.cmd` (zsdcc) nebo `build.cmd sccz80` vytvoří `build/worldclock.mzf`.
   - Spouštět z `cmd` / PowerShellu (`cmd /c build.cmd`); z Git Bashe se .cmd nespustí.
-- **Emulátor:** `python tests/emu/run_wc.py [--machine eu|jp|eu-ntsc|mz800]` na všech strojích kontroluje:
+- **Emulátor:** `python tests/emu/run_wc.py [--machine eu|jp|eu-ntsc|mz800|mz1500]` na všech strojích kontroluje:
   - detekci (model, JP, NTSC, řádky, dělitel);
   - titulek a časy 9 měst proti `zoneinfo`;
   - pruh sekund;

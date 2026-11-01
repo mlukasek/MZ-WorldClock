@@ -42,7 +42,7 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   | JP | banner na 06F3h začíná „1Z-009“ |
   | EU | jinak |
 
-  Ověřeno ze ROM v emulátoru. Na reálném stroji ještě ne.
+  Ověřeno ze ROM v emulátoru. Detekci MZ-800 upřesňuje oddíl o MZ-1500 níže.
 - **Bez přerušení.** Čas se počítá v CTC1 (1 Hz z HSYNC) a CTC2 (čítač sekund) jako v monitoru, snímky
   pollingem /VBLK. Podrobnosti budou v `vyvoj.md`.
 
@@ -120,3 +120,21 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   - když ho karta nepřijme, program ji dál nenásleduje, jinak by ruční čas při dorovnání přepsala;
   - emulovaná Unicard zápis neumí;
   - při změně pásma v dialogu se platný čas přepočítá na stejný okamžik v novém pásmu.
+
+## 2026-11-01: MZ-1500 a detekce GDG
+
+- **MZ-1500 je cílový stroj** (autor, 2026-11-01). Funguje jako japonský MZ-700, titulek je v hiraganě.
+- **Monitor MZ-1500** začíná stejně jako 1Z-013B na MZ-800 skokem do IPL (`C3 00 E8`). V hlavičce ale má
+  „1Z-009B“ a od 1Z-009B MZ-700 se liší jen ve 2 bajtech. CG-ROM je shodný s japonským MZ-700.
+  - Samotná signatura ROM tak MZ-800 nepozná. Na MZ-1500 by program zapnul grafiku MZ-800, kterou nemá.
+- **O MZ-800 rozhoduje hardware:** bit 6 stavového portu CEh (/VBLN) musí sledovat PC7 8255 (/VBLK).
+  - Měří se 2000 vzorků přes několik snímků: aspoň 2 hrany VBLK a shoda v 98 % vzorků.
+  - Kvůli neověřené polaritě se připouští i obrácená.
+  - Na MZ-700 a MZ-1500 port CEh neexistuje a čtení vrací konstantní hodnotu sběrnice.
+- **Modely:**
+  - MZ-800, když je GDG;
+  - MZ-1500, když skok do IPL, bez GDG a hlavička „1Z-009“;
+  - jinak MZ-700.
+- **Japonský stroj:** hlavička „1Z-009“, tj. MZ-700 JP i MZ-1500.
+- **Zápis `OUT (CEh),08h` se dělá před ověřením.** Na MZ-1500 porty CCh–CFh neexistují, zápis je neškodný.
+- **PCG MZ-1500** program zatím nepoužívá (nápad: jemnější pruh sekund jako na MZ-800).
