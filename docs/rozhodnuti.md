@@ -163,12 +163,13 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   - Do 2026-11-01 to bylo čisté pootočení o 44 bloků. Brazílie pak byla od Afriky 12 bloků, protože dobová mapa
     stahuje Pacifik na 2 bloky a Atlantik nechává na okrajích. Autor: Amerika je od Afriky daleko, v grafické
     mapě je blíž.
-  - Teď je Amerika (sloupce znaků 22–36) o 4 znaky dál vpravo, přes prázdný sloupec 0 zbytku mapy. Brazílie je
-    od Afriky 4 bloky (asi 18° jako na glóbu), Newfoundland od Irska 13. Zbytek mapy zůstal na místě, levý okraj
-    (Pacifik) má 4 prázdné znaky.
+  - Teď Amerika (sloupce znaků 22–36) končí přes prázdný sloupec 0 zbytku mapy. Brazílie je od Afriky 4 bloky
+    (asi 18° jako na glóbu), Newfoundland od Irska 13.
+  - Celek je vycentrovaný (autor): vlevo 4 prázdné bloky, vpravo 6, jména od sloupce 1 do 38. TOKYO a SYDNEY se
+    tak vejdou s mapou a vlastní místo už nepotřebují.
 - **Názvy a hodiny se posouvají s mapou.** Celou obrazovku posunout nejde: popisky pokrývají sloupce 2–38 v různých
   řádcích (TOKYO 19–23, L.ANGELS 22–29), každý řez by některý rozdělil.
-  - TOKYO a SYDNEY by přetekly přes okraj, mají vlastní místo (sekce `[atlantic]` v `data/historic.txt`).
+  - Co by přeteklo přes okraj, může mít vlastní místo (sekce `[atlantic]` v `data/historic.txt`). Dnes nic.
   - `tools/mkhistoric.py` kontroluje, že nic nepřetéká a nic se nepřekrývá.
 - **Přepínání historického a moderního vzhledu na MZ-800** proto nebude na M, ale na **G** (grafika).
 
