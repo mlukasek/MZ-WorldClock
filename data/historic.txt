@@ -113,10 +113,15 @@
 
 [atlantic]
 # Key M: the continents swapped, Americas on the left, Europe in the middle, Asia on the right (as usual in
-# Europe today; not in the period photos). The map rotates cyclically to the left by `shift` blocks (the cut
-# is at block column 44, empty, in the Pacific); the names and clocks of the map area (rows 2-21) move with
-# it by shift/2 columns. Those that would cross the screen edge have their own place: NAME row col (the name)
-# row col (the clock).
-shift 44
+# Europe today; not in the period photos). The map is laid out again by ranges of character columns:
+#   map FIRST END AT   the source columns FIRST..END-1 go to screen columns AT..
+# A plain rotation (the cut in the Pacific, block column 44) would leave 12 empty blocks between Brazil and
+# Africa: the period map squeezes the Pacific to 2 blocks and leaves the Atlantic margins at its edges. So the
+# Americas (columns 22-36) move 4 columns further right, over the empty column 0 of the rest: Brazil to Africa
+# 4 blocks (about 18 degrees, as on the globe), Newfoundland to Ireland 13. The names and clocks of the map area
+# (rows 2-21) move with their range. Those that would cross the screen edge have their own place: NAME row col
+# (the name) row col (the clock).
+map 22 37 4
+map 0 22 18
 TOKYO 11 35 12 35
 SYDNEY 19 34 20 34

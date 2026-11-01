@@ -5,8 +5,8 @@
                     work/historic-eu.png, -jp.png and -eu-atl.png (the continents swapped, key M), the clocks
                     showing Tokyo time --time in standard time (as in the photos)
 
-Two views: 'pacific' (the period screen) and 'atlantic' (section [atlantic]: the map rotated, the names and
-clocks moved with it). The PNG needs the CG-ROMs from the mz800emu sources (tools/cgrom.py); the C tables
+Two views: 'pacific' (the period screen) and 'atlantic' (section [atlantic]: the map rearranged by ranges of
+character columns, the names and clocks moved with their range). The PNG needs the CG-ROMs from the mz800emu sources (tools/cgrom.py); the C tables
 do not.
 """
 import argparse
@@ -50,7 +50,7 @@ class Screen:
 
 def parse(path):
     data = {'map': [], 'screen': [], 'title EU': [], 'title JP': [], 'bar': None, 'clocks': [],
-            'atlantic': {'shift': 0, 'places': {}}}
+            'atlantic': {'map': [], 'places': {}}}
     section = None
     for n, raw in enumerate(open(path, encoding='utf-8'), 1):
         line = raw.rstrip('\n')
@@ -93,10 +93,8 @@ def parse(path):
                 data['clocks'].append((int(row), int(col), name, int(offset), rule))
             elif section == 'atlantic':
                 f = line.split()
-                if f[0] == 'shift':
-                    data['atlantic']['shift'] = int(f[1])
-                    if data['atlantic']['shift'] % 2:
-                        raise ValueError('the shift must be even (whole characters)')
+                if f[0] == 'map':
+                    data['atlantic']['map'].append(tuple(int(x) for x in f[1:4]))
                 else:
                     data['atlantic']['places'][f[0]] = tuple(int(x) for x in f[1:5])
             else:
@@ -108,6 +106,36 @@ def parse(path):
     return data
 
 
+def atl_columns(data):
+    """Source character column of each screen column of the Atlantic view (None = empty): the [atlantic] map
+    ranges (source first, source end, screen first); a later range takes a column only where the earlier ones
+    left it or had nothing there. Checks that every character column with a block is shown once."""
+    m = data['map']
+    used = [any(m[r][2 * c] or m[r][2 * c + 1] for r in range(50)) for c in range(40)]
+    cols = [None] * 40
+    for first, end, at in data['atlantic']['map']:
+        for k in range(end - first):
+            c, src = at + k, first + k
+            if not 0 <= c < 40:
+                raise SystemExit('[atlantic] map %d %d %d: outside the screen' % (first, end, at))
+            if cols[c] is not None and used[cols[c]] and used[src]:
+                raise SystemExit('[atlantic] map: screen column %d gets both %d and %d' % (c, cols[c], src))
+            if cols[c] is None or not used[cols[c]]:
+                cols[c] = src
+    for src in range(40):
+        if used[src] and cols.count(src) != 1:
+            raise SystemExit('[atlantic] map: character column %d shown %d times' % (src, cols.count(src)))
+    return cols
+
+
+def atl_col(data, col):
+    """Where a name or clock starting at character column `col` goes in the Atlantic view"""
+    for first, end, at in data['atlantic']['map']:
+        if first <= col < end:
+            return col - first + at
+    raise SystemExit('[atlantic] map: no range for column %d' % col)
+
+
 def view_layout(data, view):
     """(map rows, [screen items], [clock positions (row, col)]) of a view; checks that nothing crosses the
     screen edge and that no two names or clocks overlap."""
@@ -116,8 +144,8 @@ def view_layout(data, view):
     mp = data['map']
     if view == 'atlantic':
         a = data['atlantic']
-        sh = a['shift']
-        mp = [[r[(c + sh) % 80] for c in range(80)] for r in mp]
+        cols = atl_columns(data)
+        mp = [[r[2 * cols[c // 2] + c % 2] if cols[c // 2] is not None else False for c in range(80)] for r in mp]
         places = a['places']
         moved = []
         for row, col, colour, cells, text in items:
@@ -125,7 +153,7 @@ def view_layout(data, view):
                 if text in places:
                     row, col = places[text][0], places[text][1]
                 else:
-                    col = (col - sh // 2) % 40
+                    col = atl_col(data, col)
             moved.append((row, col, colour, cells, text))
         items = moved
         clocks = []
@@ -133,7 +161,7 @@ def view_layout(data, view):
             if name in places:
                 clocks.append((places[name][2], places[name][3]))
             else:
-                clocks.append((row, (col - sh // 2) % 40))
+                clocks.append((row, atl_col(data, col)))
     used = {}
     for row, col, colour, cells, text in items:
         if col + len(cells) > 40:
@@ -202,14 +230,16 @@ def compact(data):
         if any(set1 for _, set1 in cells):
             raise SystemExit('set 1 characters outside the titles: %r' % text)
         items.append((row, col, ra, ca, COLOURS.index(colour) << 4, [c for c, _ in cells], text))
-    shift = data['atlantic']['shift'] // 2
+    cols = atl_columns(data)
     for view in ('pacific', 'atlantic'):
         want = compose(data, None, view)
         got = Screen()
         for row in range(2, 22):
             br = 2 * row - 4
             for c in range(40):
-                cs = (c + shift) % 40 if view == 'atlantic' else c
+                cs = cols[c] if view == 'atlantic' else c
+                if cs is None:
+                    continue
                 b = 0
                 for k, (dr, dc) in enumerate(((0, 0), (0, 1), (1, 0), (1, 1))):
                     col = 2 * cs + dc
@@ -222,12 +252,12 @@ def compact(data):
                 got.put(r, c0 + k, code, COLOURS[attr >> 4])
         if (got.chars, got.attrs) != (want.chars, want.attrs):
             raise SystemExit('compact data do not give the %s screen' % view)
-    return mask, items, shift
+    return mask, items, [0xFF if c is None else c for c in cols]
 
 
 def write_c(data, outdir, src):
     os.makedirs(outdir, exist_ok=True)
-    mask, items, shift = compact(data)
+    mask, items, cols = compact(data)
     titles = {}
     for t in ('EU', 'JP'):
         s = Screen()
@@ -242,8 +272,8 @@ def write_c(data, outdir, src):
     h = [gen, '#ifndef WC_HISTORIC_H', '#define WC_HISTORIC_H', '', '#include <stdint.h>', '',
          '/* The map: blocks of rows 4-43 (text rows 2-21), 10 bytes per row, bit i of byte k = block column',
          '   8k+i; a text cell is F0h + its 2x2 blocks (bit 0 top left, 1 top right, 2 bottom left, 3 bottom',
-         '   right) in blue. The Atlantic view takes text column (c + HIST_ATL_SHIFT) % 40. */',
-         'extern const uint8_t hist_map[400];', '#define HIST_ATL_SHIFT %d' % shift, '',
+         '   right) in blue. The Atlantic view shows at text column c the column hist_atl_col[c] (FFh: none). */',
+         'extern const uint8_t hist_map[400];', 'extern const uint8_t hist_atl_col[40];', '',
          '/* Title line, ruler, city names: place in the period view and in the Atlantic view */',
          'struct hist_item {', '    uint8_t row, col, row_atl, col_atl;', '    uint8_t attr, len;',
          '    const uint8_t *codes;  /* display codes */', '};',
@@ -261,7 +291,7 @@ def write_c(data, outdir, src):
           '    int16_t utc_minutes;   /* standard time offset */', '    uint8_t dst;           /* DST_... */', '};', '',
           '#define HIST_CLOCKS %d' % len(data['clocks']), 'extern const struct hist_clock hist_clocks[HIST_CLOCKS];',
           '#define HIST_CLOCK_ATTR 0x%02X' % (COLOURS.index('yellow') << 4), '', '#endif', '']
-    c = [gen, '#include "historic.h"', '', c_array('hist_map', mask)]
+    c = [gen, '#include "historic.h"', '', c_array('hist_map', mask), c_array('hist_atl_col', cols)]
     for k, (_, _, _, _, _, codes, text) in enumerate(items):
         c.append('static const uint8_t item%d[%d] = {%s};   /* %s */' % (k, len(codes), ', '.join('0x%02X' % v for v in codes),
                                                                        text or 'codes'))

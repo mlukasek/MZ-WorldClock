@@ -69,22 +69,22 @@ void hist_draw(void)
 
     memset(scr, 0, 2000);
     /* the map: text rows 2-21 from block rows 4-43 (two mask rows of 10 bytes per text row; text column cs
-       is bits 2cs, 2cs+1 of both); the Atlantic view rotated by HIST_ATL_SHIFT columns */
+       is bits 2cs, 2cs+1 of both); the Atlantic view takes its columns from hist_atl_col */
     for (r = 2; r < 22; ++r) {
         top = hist_map + (uint16_t)(2 * r - 4) * 10;
         bot = top + 10;
         ch = scr + (uint16_t)r * 40;
         at = ch + 1000;
-        cs = hist_view == VIEW_ATLANTIC ? HIST_ATL_SHIFT : 0;
         for (c = 0; c < 40; ++c) {
+            cs = hist_view == VIEW_ATLANTIC ? hist_atl_col[c] : c;
+            if (cs >= 40)
+                continue;
             s = (cs & 3) << 1;
             b = ((top[cs >> 2] >> s) & 3) | ((bot[cs >> 2] >> s) & 3) << 2;
             if (b) {
                 ch[c] = 0xF0 | b;
                 at[c] = 0x10;
             }
-            if (++cs == 40)
-                cs = 0;
         }
     }
     /* the title line, the ruler, the names */

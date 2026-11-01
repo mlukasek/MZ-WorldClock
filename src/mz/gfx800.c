@@ -61,11 +61,12 @@ uint8_t gfx_begin(const uint8_t *pal4, const uint8_t *pal16)
 
     if (!io_native) {                  /* from MZ-700 mode: its text screen goes dark first */
         memset((uint8_t *)0xD800, 0, 1000);
+        /* The speaker is CTC0 OUT (and PC0). MZ-800 mode holds GATE0 at 1, so whatever the monitor left in
+           counter 0 (the beep: mode 3) would start to sound. A control word alone stops the counter, sets OUT
+           high (as the monitor leaves it) and waits for a count that never comes: no edge, no click. */
+        IO_WR(R_CTC, 0x36);
         blank();
         io_native = 1;
-        IO_WR(R_CTC, 0x30);            /* counter 0 parked in mode 0: GATE0 is forced on in this mode */
-        IO_WR(R_CTC0, 0);
-        IO_WR(R_CTC0, 0);
         HW_OUT_BC(0x06CF, 0x00);       /* border black */
         HW_OUT_BC(0x01CF, 0x00);       /* scroll offset 0: no hardware scroll */
         HW_OUT_BC(0x02CF, 0x00);

@@ -196,6 +196,10 @@ Volby zcc pro MZ:
   - **GDG MZ-800 (mz800emu `vramctrl.c`):** zápis WF (CCh) bity 0–3 roviny, bit 4 banka, bity 5–7 režim. SINGLE,
     EXOR, OR a RESET píšou do vybraných rovin, v 320×200 i do III a IV. REPLACE a PSET píšou do rovin režimu: ve
     4 barvách I a II, v 16 barvách všech čtyř. Čtení přes RF (CDh); rovina bez rozšíření čte FFh.
+  - **Reproduktor MZ-800** je CTC0 OUT a PC0; GATE0 je v režimu MZ-800 trvale 1, v režimu MZ-700 bit 0 E008h. Před
+    přepnutím do režimu MZ-800 zapsat do čítače 0 jen řídicí slovo, bez délky. Jinak to lupne
+    ([rozhodnuti.md](rozhodnuti.md)). V emulátoru stav ukáže `get_periph_i8253` a `get_periph_beeper`; `level`
+    tam počítá s E008h i v režimu MZ-800, směrodatné jsou `ctc0_out` a `pc0`.
   - **16 barev (DMD 02h):** barva, jejíž bity rovin III a IV se rovnají skupině palety (F0h s bitem 6), jde přes
     paletu, ostatní jsou IGRB přímo. Se skupinou 0 a paletou 0, 1, 2, 3 jsou všechna čísla barev IGRB.
   - Na MZ-800 mapuje `IN (E0h)` v režimu 320×200 VRAM na 8000h–9FFFh a CG-ROM na 1000h–1FFFh současně. Kód, který

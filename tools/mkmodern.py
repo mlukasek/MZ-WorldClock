@@ -75,7 +75,7 @@ def clock_point(length, pos, sin60):
 # Cities of the modern map: name, lat, lon, standard offset (min), DST rule (wctime.h)
 CITIES = [
     ('TOKYO', 35.68, 139.69, 540, 'NONE'),
-    ('PEKIN', 39.90, 116.40, 480, 'NONE'),
+    ('PEKING', 39.90, 116.40, 480, 'NONE'),
     ('MOSCOW', 55.75, 37.62, 180, 'NONE'),
     ('PARIS', 48.86, 2.35, 60, 'EU'),
     ('WASHINGTON', 38.90, -77.04, -300, 'US'),
@@ -87,7 +87,7 @@ CITIES = [
 # Places of the home zones (src/core/zones.c, by name); UTC has none
 HOME_PLACES = {'LONDON': (51.51, -0.13), 'PRAGUE': (50.08, 14.42), 'HELSINKI': (60.17, 24.94),
                'S.AFRICA': (-26.20, 28.05), 'MOSCOW': (55.75, 37.62), 'DUBAI': (25.20, 55.27),
-               'DELHI': (28.61, 77.21), 'PEKIN': (39.90, 116.40), 'TOKYO': (35.68, 139.69),
+               'DELHI': (28.61, 77.21), 'PEKING': (39.90, 116.40), 'TOKYO': (35.68, 139.69),
                'SYDNEY': (-33.87, 151.21), 'HONOLULU': (21.31, -157.86), 'L.ANGELES': (34.05, -118.24),
                'DENVER': (39.74, -104.99), 'CHICAGO': (41.88, -87.63), 'NEW YORK': (40.71, -74.01),
                'RIO': (-22.90, -43.20)}

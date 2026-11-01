@@ -12,7 +12,7 @@ const struct wc_zone wc_zones[] = {
     {"MOSCOW", 180, DST_NONE},
     {"DUBAI", 240, DST_NONE},
     {"DELHI", 330, DST_NONE},
-    {"PEKIN", 480, DST_NONE},
+    {"PEKING", 480, DST_NONE},
     {"TOKYO", 540, DST_NONE},
     {"SYDNEY", 600, DST_AU},
     {"HONOLULU", -600, DST_NONE},

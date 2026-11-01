@@ -157,13 +157,27 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Výchozí je dobový pohled**, Pacifik uprostřed.
 - **M prohodí kontinenty:** Amerika vlevo, Evropa uprostřed, Asie vpravo, jak je dnes zvykem v Evropě. Další M vrátí
   dobový pohled.
-- **Mapa se cyklicky pootočí o 44 bloků** (22 znaků). Řez je ve sloupci bloků 44, ten je prázdný (Pacifik), takže se
-  žádná pevnina nerozdělí a mozaika se posouvá po celých znacích.
+- **Mapa se skládá po rozsazích sloupců znaků** (`map` v sekci `[atlantic]`, v programu tabulka `hist_atl_col`).
+  Řez je ve sloupci bloků 44, ten je prázdný (Pacifik), takže se žádná pevnina nerozdělí a mozaika se posouvá po
+  celých znacích.
+  - Do 2026-11-01 to bylo čisté pootočení o 44 bloků. Brazílie pak byla od Afriky 12 bloků, protože dobová mapa
+    stahuje Pacifik na 2 bloky a Atlantik nechává na okrajích. Autor: Amerika je od Afriky daleko, v grafické
+    mapě je blíž.
+  - Teď je Amerika (sloupce znaků 22–36) o 4 znaky dál vpravo, přes prázdný sloupec 0 zbytku mapy. Brazílie je
+    od Afriky 4 bloky (asi 18° jako na glóbu), Newfoundland od Irska 13. Zbytek mapy zůstal na místě, levý okraj
+    (Pacifik) má 4 prázdné znaky.
 - **Názvy a hodiny se posouvají s mapou.** Celou obrazovku posunout nejde: popisky pokrývají sloupce 2–38 v různých
   řádcích (TOKYO 19–23, L.ANGELS 22–29), každý řez by některý rozdělil.
   - TOKYO a SYDNEY by přetekly přes okraj, mají vlastní místo (sekce `[atlantic]` v `data/historic.txt`).
   - `tools/mkhistoric.py` kontroluje, že nic nepřetéká a nic se nepřekrývá.
 - **Přepínání historického a moderního vzhledu na MZ-800** proto nebude na M, ale na **G** (grafika).
+
+## 2026-11-01: jména měst (autor)
+
+- **Historický vzhled přesně podle originálu:** L.ANGELS (leták), PEKIN, REO, S.AFRICA.
+- **Nové obrazovky a dialog správně:** L.ANGELES, PEKING, RIO. S.AFRICA zůstává (pásmo Jihoafrické republiky,
+  delší jméno města se nevejde).
+  - Mapa a hodiny MZ-800: `CITIES` v `tools/mkmodern.py`; domovská pásma: `src/core/zones.c`.
 
 ## 2026-11-01: vlastní znaky na MZ-800 (CG-RAM)
 
@@ -219,7 +233,7 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
     snímek. Sekundy běží dál.
 - **Domovské pásmo** má tečkovaný okraj: tečka v levém horním bodě každé okrajové buňky 2×2 body. Okraj se počítá
   jednou pro domovské pásmo, poprvé hned po startu.
-- **Města:** 9 jako na historické obrazovce (TOKYO, PEKIN, MOSCOW, PARIS, WASHINGTON, L.ANGELES, RIO, S.AFRICA,
+- **Města:** 9 jako na historické obrazovce (TOKYO, PEKING, MOSCOW, PARIS, WASHINGTON, L.ANGELES, RIO, S.AFRICA,
   SYDNEY). Značka je křížek, domovské město má větší. Popisky (jméno a HH:MM) jsou zarovnané na bajty, s černým
   stínem; jejich místa pro oba pohledy hledá `tools/mkmodern.py`.
 - **Atlantický pohled (M)** je stejná mapa pootočená o 128 bodů (16 bajtů).
@@ -255,3 +269,15 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Každou sekundu** se překreslí jen změněné číslice. U ručiček se stará vteřinová přetáhne barvou ciferníku,
   pak se znovu nakreslí číslice ciferníku a všechny ručičky. Ručičky nesahají na značky.
 - **Každou minutu** se překreslí poloha Slunce, časy měst, posun, datum a při změně dne a noci celý ciferník.
+
+## 2026-11-01: lupnutí při přechodu do režimu MZ-800 (autor)
+
+- **Příčina:** reproduktor MZ-800 je výstup CTC0 OUT (a PC0 8255). V režimu MZ-700 hradluje čítač 0 bit 0
+  E008h (monitor ho nechává na 0), v režimu MZ-800 je GATE0 trvale 1.
+  - Monitor nechává čítač 0 v režimu 3 s délkou pípnutí. Po přepnutí do režimu MZ-800 by se na reálném stroji
+    rozběhl tón.
+  - Program pak čítač „parkoval“ v režimu 0 s délkou 0: OUT spadl do 0 a po 73 ms se vrátil do 1. To jsou dvě
+    lupnutí, slyšet byla i v emulátoru.
+- **Oprava:** ještě v režimu MZ-700 se do čítače 0 zapíše jen řídicí slovo (36h, režim 3) bez délky. Čítač
+  přestane počítat, OUT zůstane v 1, jako ho nechal monitor, a čeká na délku, která nepřijde. Žádná hrana.
+  - Ověřeno v emulátoru (`get_periph_i8253`): při všech přechodech G zůstává OUT 1 a hodnota čítače se nemění.
