@@ -63,6 +63,10 @@ nic nemění.
 
 ## Překlad a testy
 
+- **Jádro času:** `python tests/core/run_core.py [--cc sdcc|sccz80]`.
+  - Přeloží `tests/core/test_wctime.c` pro `+test` a spustí ho v `z88dk-ticks`.
+  - Výsledky porovná se `zoneinfo`; na Windows je potřeba `python -m pip install --user tzdata`.
+
 - **Smoke test toolchainu:**
   - překlad: `tests\smoke\build_smoke.cmd [sccz80|sdcc]` vytvoří `build\smoke-<cc>.mzf`;
   - běh: `python tests/smoke/run_smoke.py --cc sccz80|sdcc` na všech čtyřech strojích kontroluje text na obrazovce,

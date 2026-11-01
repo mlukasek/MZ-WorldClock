@@ -63,8 +63,21 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Pillow, numpy a scipy** (nainstalované přes `pip --user`) jen pro analytické skripty v `tools/ref/`.
 - **Build a testy zůstávají jen na standardní knihovně Pythonu.**
 
-## 2026-11-01: překladač
+## 2026-11-01: překladač zsdcc
 
-- **Smoke test:** zsdcc 598 B, sccz80 776 B.
-- **Volbu odkládám:** rozhodne se měřením velikosti a rychlosti na jádru (čas, letní čas, terminátor).
-- **Build obou překladačů zůstává funkční.**
+- **Měření:**
+  - smoke test: zsdcc 598 B, sccz80 776 B;
+  - jádro času (`tests/core/run_core.py`, 8358 vektorů): zsdcc 175 tis. T na vektor, sccz80 193 tis. T.
+- **Výchozí je zsdcc** (`zcc -compiler=sdcc`). Build i testy s sccz80 zůstávají funkční.
+
+## 2026-11-01: jádro času
+
+- **Čas je počet sekund od 2000-01-01 00:00** (`wc_time_t`, 32 bitů), roky 2000–2099.
+  - V tomto rozsahu je přestupný každý čtvrtý rok, kalendář proto nepotřebuje cykly přes roky.
+  - První verze s cyklem trvala asi 1 milion T na jeden místní čas, tj. 0,3 s na Z80.
+- **Letní čas podle dnešních pravidel**, použitých na každý rok: EU, USA, Austrálie (jih).
+- **Místní čas → UTC:**
+  - opakovaná hodina na konci letního času se bere jako letní čas (dřívější okamžik);
+  - čas v přeskočené hodině se bere jako standardní.
+- **Ověření:** `tests/core/run_core.py` proti `zoneinfo` (Python, balíček tzdata).
+  - Každý přechod 2008–2099 v 11 pásmech ±1 s a ±1 h, plus náhodné časy.
