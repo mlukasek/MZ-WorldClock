@@ -35,3 +35,9 @@ Reálné stroje má autor. U každé otázky je, proč na ní záleží.
 9. **Zápis času z dialogu (příkazy 61h, 60h):** přijme ho karta, zůstane po vypnutí a čte se pak zpět správně?
    - Emulátor zápis neumí, je to ověřené jen proti dokumentaci firmwaru.
 10. **Doba čekání na hranu sekundy karty při startu:** obrazovka se objeví hned. Časy naskočí nejvýš po 1 s?
+
+## MZ-1500
+
+11. **PCG:** je pořadí bitů ve vzorech (bit 7 vlevo) a priorita BFP na reálném stroji tak, jak to dělá emulátor? Je
+    půlbuňka pruhu purpurová a navazuje na plné buňky (znak 3Ah)?
+12. **Po návratu do monitoru (BREAK)** je obrazovka v pořádku, bez zbytků PCG?

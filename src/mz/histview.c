@@ -3,8 +3,8 @@
  * After a minute changes, the cities are recomputed one per call (a local time costs some tens of
  * thousands of T states), so the colons and the seconds bar never stop. The bar is full after 60 s: 30
  * cells of HIST_BAR_CHAR (the lower half of the cell), counted in halves of a cell. The CG-ROMs have no
- * glyph for half of it, so the MZ-700 steps by whole cells (2 s); with hist_fine the own half glyph (set 1,
- * the same code, in the MZ-800's CG-RAM) gives 1 s steps. */
+ * glyph for half of it, so the MZ-700 steps by whole cells (2 s); with hist_half the own half glyph gives 1 s
+ * steps: on the MZ-800 from its CG-RAM (set 1, the same code), on the MZ-1500 from its PCG. */
 #include <string.h>
 #include "histview.h"
 #include "historic.h"
@@ -15,8 +15,8 @@
 #define COLON 0x4F
 
 uint8_t hist_view;
-uint8_t hist_fine;
 uint8_t hist_hiragana;
+void (*hist_half)(uint8_t cell, uint8_t on);
 
 static uint32_t shown_minute;
 static wc_time_t minute_utc;
@@ -47,6 +47,15 @@ static void draw_clock(uint8_t i)
     memset((uint8_t *)VRAM_ATTR + p, HIST_CLOCK_ATTR, 5);
 }
 
+/* The half cell from the MZ-800's CG-RAM: the bar character in set 1 is the own half glyph */
+void hist_half_cgram(uint8_t cell, uint8_t on)
+{
+    if (on) {
+        VRAM_TEXT[HIST_BAR_ROW * 40 + HIST_BAR_COL + cell] = HIST_BAR_CHAR;
+        VRAM_ATTR[HIST_BAR_ROW * 40 + HIST_BAR_COL + cell] = HIST_BAR_ATTR | 0x80;
+    }
+}
+
 void hist_draw(void)
 {
     if (hist_view == VIEW_ATLANTIC) {
@@ -63,6 +72,8 @@ void hist_draw(void)
         memcpy((uint8_t *)VRAM_TEXT, hist_title_eu_chars, 40);
         memcpy((uint8_t *)VRAM_ATTR, hist_title_eu_attrs, 40);
     }
+    if (bar_shown & 1)
+        hist_half(bar_shown >> 1, 0);    /* the screen copy has an empty bar */
     shown_minute = 0xFFFFFFFFUL;
     colon_shown = 2;
     bar_shown = 0;
@@ -93,8 +104,10 @@ void hist_update(wc_time_t utc, uint8_t colon_on)
         for (i = 0; i < HIST_CLOCKS; ++i)
             VRAM_TEXT[clock_pos(i) + 2] = colon_on ? COLON : 0x00;
     }
-    halves = hist_fine ? sec + 1 : (sec + 1) & 0xFE;   /* full during the last second of the minute */
+    halves = hist_half ? sec + 1 : (sec + 1) & 0xFE;   /* full during the last second of the minute */
     if (halves != bar_shown) {
+        if (bar_shown & 1)
+            hist_half(bar_shown >> 1, 0);
         if (halves < bar_shown) {
             memset((uint8_t *)bar, 0x00, HIST_BAR_CELLS);
             memset((uint8_t *)bar_attr, HIST_BAR_ATTR, HIST_BAR_CELLS);
@@ -104,10 +117,8 @@ void hist_update(wc_time_t utc, uint8_t colon_on)
             bar[i] = HIST_BAR_CHAR;
             bar_attr[i] = HIST_BAR_ATTR;
         }
-        if (halves & 1) {
-            bar[halves >> 1] = HIST_BAR_CHAR;
-            bar_attr[halves >> 1] = HIST_BAR_ATTR | 0x80;   /* set 1: the own half glyph */
-        }
+        if (halves & 1)
+            hist_half(halves >> 1, 1);
         bar_shown = halves;
     }
 }

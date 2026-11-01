@@ -168,3 +168,21 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   - test to ověřuje přes regiony emulátoru `cgram_700` a `cgrom`.
 - **Pruh se počítá v půlkách buňky:** jemný režim `s+1`, hrubý `(s+1) & ~1`. V obou je plný v poslední sekundě minuty
   a jemný je vždy aspoň tak dlouhý jako hrubý.
+
+## 2026-11-01: PCG na MZ-1500 (autor)
+
+- **Pruh v krocích po 1 s i na MZ-1500**, přes PCG. Vzhled zůstává jako na fotkách.
+- **Programování PCG** (podle zdrojů mz800emu a IPL MZ-1500; skutečný HW ještě neověřen, `hw-otazky.md`):
+  - Režim: `OUT (F0h),03h` je režim MZ-1500 s prioritou BFP (text dole, nenulové body PCG navrch), `OUT (F0h),00h`
+    je režim MZ-700 jako po IPL. Port jde jen zapisovat.
+  - Banky: `OUT (E5h),1..3` mapuje banku vzorů 1–3 (bity indexu barvy) na D000h–EFFFh, 8 bajtů na znak, **bit 7 je
+    nejlevější bod** (u CG-ROM bit 0). `OUT (E6h)` je odmapuje. Mezitím nejsou dostupné VRAM, I/O na E000h ani
+    F000h–FFFFh. Kód je na 2000h–7FFFh a běží s DI.
+  - Buňky: PCGLO na D400h + pozice (číslo znaku), PCGHI na DC00h + pozice, bit 3 = PCG zapnuto. Vypnuto se píše
+    71h, to je hodnota z CLS monitoru.
+  - Barva: IPL nastavuje identickou paletu, index 3 (roviny 1 a 2) je purpurová.
+- **Půlbuňka pruhu na MZ-1500** je prázdná textová buňka se zapnutým PCG znakem 1, tj. glyf `BAR_HALF` s převráceným
+  pořadím bitů.
+- **Konec:** `OUT (F0h),00h`, bajty buněk vrátí CLS monitoru.
+- **Program porty F0h a E5h na jiných strojích nepoužívá.** Na MZ-800 je F0h paleta, na MZ-700 je E5h „zakázaný“
+  režim paměti.

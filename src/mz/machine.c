@@ -11,6 +11,7 @@
 #include "hw.h"
 #include "timebase.h"
 #include "cgram.h"
+#include "pcg1500.h"
 
 struct machine mach;
 
@@ -70,6 +71,8 @@ void machine_exit(uint32_t local_secs)
 {
     if (mach.model == MODEL_MZ800)
         cgram_restore();             /* the CG-RAM as the IPL left it: a copy of the CG-ROM */
+    else if (mach.model == MODEL_MZ1500)
+        pcg_exit();                  /* MZ-700 mode; mon_cls() below rewrites the PCG cell bytes */
     PPI_CTRL = 0x05;                 /* PC2 = 1: the monitor's clock interrupt */
     mon_set_clock(local_secs);       /* reprograms CTC1/CTC2 and ends with EI */
     mon_cls();

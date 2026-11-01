@@ -13,6 +13,7 @@
 #include "rtcsync.h"
 #include "rtc_unicard.h"
 #include "cgram.h"
+#include "pcg1500.h"
 
 static uint8_t home;
 
@@ -29,7 +30,10 @@ int main(void)
     if (mach.model == MODEL_MZ800) {
         cgram_load();                /* the hiragana title and the half cell of the bar */
         hist_hiragana = 1;
-        hist_fine = 1;
+        hist_half = hist_half_cgram;
+    } else if (mach.model == MODEL_MZ1500) {
+        pcg_init();                  /* the half cell of the bar */
+        hist_half = pcg_half;
     }
     home = mach.jp ? ZONE_TOKYO : ZONE_PRAGUE;
 
