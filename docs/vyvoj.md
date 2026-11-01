@@ -21,7 +21,10 @@
   - hodiny v barvách originálu, s rozšířením VRAM v 16 barvách, bez něj ve 4;
   - program se nahrává od 1200h, studená část je v 1200h–1FFFh ([rozhodnuti.md](rozhodnuti.md), paměť).
   - **Místo:** pod 8000h zbývá asi 1,2 KB, studená část má rezervu asi 145 B.
-- **Další krok:** fáze 6, reálný HW (autor, [hw-otazky.md](hw-otazky.md)), README se snímky, release MZF.
+- **Po fázi 5 podle autora:** mapa v 16 barvách, kulatý ciferník, ovládání mezerníkem, šipkami a CR s nápovědou
+  po startu, titulek podle pohledu, vycentrovaný atlantický pohled, opravené lupnutí.
+- **Fáze 6 (reálný HW, README, release):** na reálném HW otestováno, funguje ([hw-otazky.md](hw-otazky.md)).
+  Další krok je README se snímky a release MZF.
 
 ## Plán vývoje
 
@@ -36,7 +39,7 @@
    - prototyp moderní mapy jako PNG ke schválení;
    - grafika 320×200, mapa z Natural Earth, den a noc, domovské pásmo, přepínání `G`. **Hotovo.**
 5. **Velké digitální a ručičkové hodiny.** **Hotovo.**
-6. **Reálný HW (autor), README se snímky, release MZF.**
+6. **Reálný HW (autor), README se snímky, release MZF.** Reálný HW hotový.
 7. **Později port na SAPI-1** (CGA-1V, hodiny DPI na B0h/B1h, `zcc +cpm`).
 
 ## Nástroje

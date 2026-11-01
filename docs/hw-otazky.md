@@ -7,8 +7,13 @@ Reálné stroje má autor. U každé otázky je, proč na ní záleží.
 - **MZ-800 (reálný):** program běží v obou polohách přepínače SW1.
   - Spuštěno z Unicard Manageru a z manažeru UniCMT, ne z kazety. Start z kazety zatím neověřen.
   - Čas z Unicard RTC se bere správně.
+- **MZ-800 (reálný), fáze 5:** všechno funguje, barvy jsou v pořádku a rozšířenou VRAM program pozná.
+  - Lupnutí reproduktoru při přechodu do grafiky bylo slyšet i v emulátoru, opravené (rozhodnuti.md).
+  - Ciferník byl na monitoru zploštělý, teď je kulatý na čtvercových bodech.
+- **Aktuální verze (ovládání mezerník, šipky, CR; titulek podle pohledu):** otestována na reálném HW, funguje.
 - **MZ-1500 (emulátor):** běží, titulek v hiraganě.
 - **Japonský MZ-700 fyzicky:** zatím nezkoušeno.
+- **Zbývá ověřit:** MZ-800 bez rozšíření VRAM (4 barvy), start z kazety, japonská klávesnice.
 
 ## MZ-700
 
