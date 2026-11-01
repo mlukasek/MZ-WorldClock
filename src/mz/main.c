@@ -1,8 +1,8 @@
-/* MZ-WorldClock for the Sharp MZ-700 (EU, JP) and MZ-800: main loop.
+/* MZ-WorldClock for the Sharp MZ-700 (EU, JP), MZ-800 and MZ-1500: main loop.
  *
  * Start: detect the machine, start the time base, get the time (the test hook, the Unicard RTC or the
- * dialog), then the historic screen, one pass per frame. T sets the time again, BREAK returns to the monitor
- * with its clock set. */
+ * dialog), then the historic screen, one pass per frame. T sets the time again, M swaps the continents
+ * (Americas on the left), BREAK returns to the monitor with its clock set. */
 #include "machine.h"
 #include "timebase.h"
 #include "kbd.h"
@@ -48,6 +48,9 @@ int main(void)
             break;
         if (key == 'T') {
             setup_run(&home, 1);
+            hist_draw();
+        } else if (key == 'M') {
+            hist_view ^= 1;
             hist_draw();
         }
     }

@@ -138,3 +138,16 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Japonský stroj:** hlavička „1Z-009“, tj. MZ-700 JP i MZ-1500.
 - **Zápis `OUT (CEh),08h` se dělá před ověřením.** Na MZ-1500 porty CCh–CFh neexistují, zápis je neškodný.
 - **PCG MZ-1500** program zatím nepoužívá (nápad: jemnější pruh sekund jako na MZ-800).
+
+## 2026-11-01: prohození kontinentů (klávesa M, autor)
+
+- **Výchozí je dobový pohled**, Pacifik uprostřed.
+- **M prohodí kontinenty:** Amerika vlevo, Evropa uprostřed, Asie vpravo, jak je dnes zvykem v Evropě. Další M vrátí
+  dobový pohled.
+- **Mapa se cyklicky pootočí o 44 bloků** (22 znaků). Řez je ve sloupci bloků 44, ten je prázdný (Pacifik), takže se
+  žádná pevnina nerozdělí a mozaika se posouvá po celých znacích.
+- **Názvy a hodiny se posouvají s mapou.** Celou obrazovku posunout nejde: popisky pokrývají sloupce 2–38 v různých
+  řádcích (TOKYO 19–23, L.ANGELS 22–29), každý řez by některý rozdělil.
+  - TOKYO a SYDNEY by přetekly přes okraj, mají vlastní místo (sekce `[atlantic]` v `data/historic.txt`).
+  - `tools/mkhistoric.py` kontroluje, že nic nepřetéká a nic se nepřekrývá.
+- **Přepínání historického a moderního vzhledu na MZ-800** proto nebude na M, ale na **G** (grafika).

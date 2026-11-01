@@ -110,3 +110,13 @@
 16 33 REO -180 none
 19 4 S.AFRICA 120 none
 20 17 SYDNEY 600 AU
+
+[atlantic]
+# Key M: the continents swapped, Americas on the left, Europe in the middle, Asia on the right (as usual in
+# Europe today; not in the period photos). The map rotates cyclically to the left by `shift` blocks (the cut
+# is at block column 44, empty, in the Pacific); the names and clocks of the map area (rows 2-21) move with
+# it by shift/2 columns. Those that would cross the screen edge have their own place: NAME row col (the name)
+# row col (the clock).
+shift 44
+TOKYO 11 35 12 35
+SYDNEY 19 34 20 34

@@ -12,27 +12,46 @@
 
 #define COLON 0x4F
 
+uint8_t hist_view;
+
 static uint32_t shown_minute;
 static wc_time_t minute_utc;
 static uint16_t dirty;                 /* bit i: clock i to redraw */
 static uint8_t colon_shown;
 static uint8_t bar_shown;
 
+/* Screen offset of clock i in the current view */
+static uint16_t clock_pos(uint8_t i)
+{
+    const struct hist_clock *c = &hist_clocks[i];
+
+    return hist_view == VIEW_ATLANTIC ? c->row_atl * 40 + c->col_atl : c->row * 40 + c->col;
+}
+
 static void draw_clock(uint8_t i)
 {
     const struct hist_clock *c = &hist_clocks[i];
     struct wc_tm tm;
+    uint16_t p = clock_pos(i);
 
     wc_split(wc_to_local(minute_utc, c->utc_minutes, c->dst), &tm);
-    txt_dec2(c->row, c->col, tm.hour, HIST_CLOCK_ATTR);
-    txt_putc(c->row, c->col + 2, colon_shown == 1 ? COLON : 0x00, HIST_CLOCK_ATTR);
-    txt_dec2(c->row, c->col + 3, tm.min, HIST_CLOCK_ATTR);
+    VRAM_TEXT[p] = 0x20 + tm.hour / 10;
+    VRAM_TEXT[p + 1] = 0x20 + tm.hour % 10;
+    VRAM_TEXT[p + 2] = colon_shown == 1 ? COLON : 0x00;
+    VRAM_TEXT[p + 3] = 0x20 + tm.min / 10;
+    VRAM_TEXT[p + 4] = 0x20 + tm.min % 10;
+    memset((uint8_t *)VRAM_ATTR + p, HIST_CLOCK_ATTR, 5);
 }
 
 void hist_draw(void)
 {
-    memcpy((uint8_t *)VRAM_TEXT, hist_chars, 1000);
-    memcpy((uint8_t *)VRAM_ATTR, hist_attrs, 1000);
+    if (hist_view == VIEW_ATLANTIC) {
+        memcpy((uint8_t *)VRAM_TEXT, hist_atl_chars, 1000);
+        memcpy((uint8_t *)VRAM_ATTR, hist_atl_attrs, 1000);
+    } else {
+        memcpy((uint8_t *)VRAM_TEXT, hist_chars, 1000);
+        memcpy((uint8_t *)VRAM_ATTR, hist_attrs, 1000);
+    }
     if (mach.jp) {
         memcpy((uint8_t *)VRAM_TEXT, hist_title_jp_chars, 40);
         memcpy((uint8_t *)VRAM_ATTR, hist_title_jp_attrs, 40);
@@ -67,7 +86,7 @@ void hist_update(wc_time_t utc, uint8_t colon_on)
     if (colon_on != colon_shown) {
         colon_shown = colon_on;
         for (i = 0; i < HIST_CLOCKS; ++i)
-            VRAM_TEXT[hist_clocks[i].row * 40 + hist_clocks[i].col + 2] = colon_on ? COLON : 0x00;
+            VRAM_TEXT[clock_pos(i) + 2] = colon_on ? COLON : 0x00;
     }
     cells = (sec + 1) / 2;                 /* full during the last second of the minute */
     if (cells < bar_shown) {

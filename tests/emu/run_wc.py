@@ -38,26 +38,36 @@ def disp(text):
     return bytes(ASCII_TO_DISPLAY[c] for c in text)
 
 
-def check_screen(emu, data, utc, jp, errs):
+def check_screen(emu, data, utc, jp, errs, view='pacific'):
+    """The whole screen against the data: the static part of `view` (map, names, title, ruler), the clocks
+    at the view's places in the time `utc` (zoneinfo), the seconds bar."""
     chars, attrs = emu.text_dump()
-    title = mkhistoric.compose(data, 'JP' if jp else 'EU')
-    if chars[:40] != bytes(title.chars[:40]):
-        errs.append('title: %s' % chars[:40].hex())
-    for row, col, name, off, rule in data['clocks']:
+    want = mkhistoric.compose(data, 'JP' if jp else 'EU', view)
+    clocks = mkhistoric.clock_positions(data, view)
+    skip = set()
+    for row, col in clocks:
+        skip.update(range(row * 40 + col, row * 40 + col + 5))
+    brow, bcol, bcells, bcolour, bcode = data['bar']
+    skip.update(range(brow * 40 + bcol, brow * 40 + bcol + bcells))
+    bad = [i for i in range(1000) if i not in skip and (chars[i], attrs[i]) != (want.chars[i], want.attrs[i])]
+    if bad:
+        errs.append('%s view: %d cells differ, first at row %d col %d' % (view, len(bad), bad[0] // 40, bad[0] % 40))
+    for (row, col), (_, _, name, off, rule) in zip(clocks, data['clocks']):
         local = utc.astimezone(ZoneInfo(TZ[name]))
-        want = disp('%02d' % local.hour), disp('%02d' % local.minute)
-        got = chars[row * 40 + col:row * 40 + col + 2], chars[row * 40 + col + 3:row * 40 + col + 5]
-        if got != want:
-            errs.append('%s: %s want %02d:%02d' % (name, chars[row * 40 + col:row * 40 + col + 5].hex(),
-                                                 local.hour, local.minute))
-        if attrs[row * 40 + col] != 0x60:
-            errs.append('%s: attribute %02X' % (name, attrs[row * 40 + col]))
-    row, col, cells, colour, code = data['bar']
-    bar = chars[row * 40 + col:row * 40 + col + cells]
+        p = row * 40 + col
+        if (chars[p:p + 2], chars[p + 3:p + 5]) != (disp('%02d' % local.hour), disp('%02d' % local.minute)):
+            errs.append('%s view, %s: %s want %02d:%02d' % (view, name, chars[p:p + 5].hex(), local.hour, local.minute))
+        if attrs[p] != 0x60:
+            errs.append('%s: attribute %02X' % (name, attrs[p]))
+    bar = chars[brow * 40 + bcol:brow * 40 + bcol + bcells]
     n = len(bar.rstrip(b'\x00'))
-    want = (utc.second + 1) // 2
-    if bar[:n] != bytes([code]) * n or abs(n - want) > 1:
-        errs.append('bar: %d cells, want about %d' % (n, want))
+    want_n = (utc.second + 1) // 2
+    if bar[:n] != bytes([bcode]) * n or abs(n - want_n) > 1:
+        errs.append('bar: %d cells, want about %d' % (n, want_n))
+
+
+def program_time(emu, syms):
+    return EPOCH + timedelta(seconds=struct.unpack('<I', emu.mem(syms['_tb_last_utc'], 4))[0])
 
 
 # The state the MZ-800 IPL leaves when it starts a program in MZ-800 mode (rear switch SW1): native mode
@@ -108,6 +118,12 @@ def run_machine(name, utc0, dialog, mzf, syms, data, native=False):
         check_screen(emu, data, utc, jp, errs)
         emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s%s%s.png' % (name, '-dialog' if dialog else '',
                                                                        '-native' if native else '')))
+        if not dialog:                                  # M: the continents swapped, M again: back
+            emu.key('M', 3, 20)
+            check_screen(emu, data, program_time(emu, syms), jp, errs, 'atlantic')
+            emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s-atlantic.png' % name))
+            emu.key('M', 3, 20)
+            check_screen(emu, data, program_time(emu, syms), jp, errs, 'pacific')
         emu.key('BREAK', 5, 30)
         pc = emu.regs().get('PC', emu.regs().get('pc'))
         if pc is None or pc >= 0x1000:

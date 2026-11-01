@@ -1,10 +1,13 @@
-"""The historic screen: data/historic.txt -> C tables (and a PNG preview). Standard library only.
+"""The historic screen: data/historic.txt -> C tables (and PNG previews). Standard library only.
 
     python tools/mkhistoric.py data/historic.txt build/gen          historic.c, historic.h
     python tools/mkhistoric.py data/historic.txt --png work/historic --time 00:00 --bar 17
-                    work/historic-eu.png and -jp.png, the clocks showing Tokyo time --time (as in the photos)
+                    work/historic-eu.png, -jp.png and -eu-atl.png (the continents swapped, key M), the clocks
+                    showing Tokyo time --time in standard time (as in the photos)
 
-The PNG needs the CG-ROMs from the mz800emu sources (tools/cgrom.py); the C tables do not.
+Two views: 'pacific' (the period screen) and 'atlantic' (section [atlantic]: the map rotated, the names and
+clocks moved with it). The PNG needs the CG-ROMs from the mz800emu sources (tools/cgrom.py); the C tables
+do not.
 """
 import argparse
 import os
@@ -13,6 +16,7 @@ import sys
 
 COLOURS = ['black', 'blue', 'red', 'magenta', 'green', 'cyan', 'yellow', 'white']
 DST_RULES = ['none', 'EU', 'US', 'AU']
+MAP_ROWS = range(2, 22)            # text rows of the map area: their names and clocks move with the map
 
 # ASCII 20h-5Fh -> display code (the monitor's table at 0A92h, the same in 1Z-013A and 1Z-009B)
 ASCII_DISPLAY = [0x00, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6B, 0x6A, 0x2F, 0x2A, 0x2E, 0x2D,
@@ -45,7 +49,8 @@ class Screen:
 
 
 def parse(path):
-    data = {'map': [], 'screen': [], 'title EU': [], 'title JP': [], 'bar': None, 'clocks': []}
+    data = {'map': [], 'screen': [], 'title EU': [], 'title JP': [], 'bar': None, 'clocks': [],
+            'atlantic': {'shift': 0, 'places': {}}}
     section = None
     for n, raw in enumerate(open(path, encoding='utf-8'), 1):
         line = raw.rstrip('\n')
@@ -55,7 +60,7 @@ def parse(path):
         if m:
             section = m.group(1)
             if section not in data:
-                raise ValueError('%s:%d: unknown section [%s]' % (path, n, section))
+                raise SystemExit('%s:%d: unknown section [%s]' % (path, n, section))
             continue
         try:
             if section == 'map':
@@ -77,7 +82,7 @@ def parse(path):
                         cells += [(code, set1)] * (int(rep) if rep else 1)
                 else:
                     raise ValueError('kind %s (text or codes)' % kind)
-                data[section].append((int(row), int(col), colour, cells))
+                data[section].append((int(row), int(col), colour, cells, rest if kind == 'text' else None))
             elif section == 'bar':
                 row, col, cells, colour, code = line.split()
                 data['bar'] = (int(row), int(col), int(cells), colour, int(code, 16))
@@ -86,6 +91,14 @@ def parse(path):
                 if rule not in DST_RULES:
                     raise ValueError('DST rule %s' % rule)
                 data['clocks'].append((int(row), int(col), name, int(offset), rule))
+            elif section == 'atlantic':
+                f = line.split()
+                if f[0] == 'shift':
+                    data['atlantic']['shift'] = int(f[1])
+                    if data['atlantic']['shift'] % 2:
+                        raise ValueError('the shift must be even (whole characters)')
+                else:
+                    data['atlantic']['places'][f[0]] = tuple(int(x) for x in f[1:5])
             else:
                 raise ValueError('line outside a section')
         except ValueError as e:
@@ -95,21 +108,69 @@ def parse(path):
     return data
 
 
-def compose(data, title=None):
-    """The static screen: map, then [screen], then the title `title` ('EU' / 'JP' / None)."""
+def view_layout(data, view):
+    """(map rows, [screen items], [clock positions (row, col)]) of a view; checks that nothing crosses the
+    screen edge and that no two names or clocks overlap."""
+    items = list(data['screen'])
+    clocks = [(row, col) for row, col, _, _, _ in data['clocks']]
+    mp = data['map']
+    if view == 'atlantic':
+        a = data['atlantic']
+        sh = a['shift']
+        mp = [[r[(c + sh) % 80] for c in range(80)] for r in mp]
+        places = a['places']
+        moved = []
+        for row, col, colour, cells, text in items:
+            if row in MAP_ROWS:
+                if text in places:
+                    row, col = places[text][0], places[text][1]
+                else:
+                    col = (col - sh // 2) % 40
+            moved.append((row, col, colour, cells, text))
+        items = moved
+        clocks = []
+        for row, col, name, _, _ in data['clocks']:
+            if name in places:
+                clocks.append((places[name][2], places[name][3]))
+            else:
+                clocks.append((row, (col - sh // 2) % 40))
+    used = {}
+    for row, col, colour, cells, text in items:
+        if col + len(cells) > 40:
+            raise SystemExit('%s view: %r at %d,%d crosses the screen edge' % (view, text or cells, row, col))
+        if row in MAP_ROWS:
+            for k in range(len(cells)):
+                if (row, col + k) in used:
+                    raise SystemExit('%s view: %r overlaps %r' % (view, text, used[(row, col + k)]))
+                used[(row, col + k)] = text
+    for (row, col), (_, _, name, _, _) in zip(clocks, data['clocks']):
+        if col + 5 > 40:
+            raise SystemExit('%s view: the clock of %s crosses the screen edge' % (view, name))
+        for k in range(5):
+            if (row, col + k) in used:
+                raise SystemExit('%s view: the clock of %s overlaps %r' % (view, name, used[(row, col + k)]))
+            used[(row, col + k)] = name + ' clock'
+    return mp, items, clocks
+
+
+def compose(data, title=None, view='pacific'):
+    """The static screen of a view: map, then [screen], then the title `title` ('EU' / 'JP' / None)."""
+    mp, items, _ = view_layout(data, view)
     s = Screen()
     for cy in range(25):
         for cx in range(40):
-            m = data['map']
-            b = (m[cy * 2][cx * 2] | m[cy * 2][cx * 2 + 1] << 1 | m[cy * 2 + 1][cx * 2] << 2
-                 | m[cy * 2 + 1][cx * 2 + 1] << 3)
+            b = (mp[cy * 2][cx * 2] | mp[cy * 2][cx * 2 + 1] << 1 | mp[cy * 2 + 1][cx * 2] << 2
+                 | mp[cy * 2 + 1][cx * 2 + 1] << 3)
             if b:
                 s.put(cy, cx, 0xF0 | b, 'blue')
-    items = data['screen'] + (data['title ' + title] if title else [])
-    for row, col, colour, cells in items:
+    for row, col, colour, cells, _ in items + (data['title ' + title] if title else []):
         for k, (code, set1) in enumerate(cells):
             s.put(row, col + k, code, colour, set1)
     return s
+
+
+def clock_positions(data, view='pacific'):
+    return view_layout(data, view)[2]
 
 
 def c_array(name, values, ctype='uint8_t'):
@@ -121,11 +182,12 @@ def c_array(name, values, ctype='uint8_t'):
 
 def write_c(data, outdir, src):
     os.makedirs(outdir, exist_ok=True)
-    base = compose(data)
+    pac = compose(data)
+    atl = compose(data, view='atlantic')
     titles = {}
     for t in ('EU', 'JP'):
         s = Screen()
-        for row, col, colour, cells in data['title ' + t]:
+        for row, col, colour, cells, _ in data['title ' + t]:
             if row != 0:
                 raise SystemExit('titles must be in row 0')
             for k, (code, set1) in enumerate(cells):
@@ -134,8 +196,10 @@ def write_c(data, outdir, src):
     bar = data['bar']
     gen = '/* Generated by tools/mkhistoric.py from %s - do not edit. */\n' % src.replace('\\', '/')
     h = [gen, '#ifndef WC_HISTORIC_H', '#define WC_HISTORIC_H', '', '#include <stdint.h>', '',
-         '/* The static screen (map, title line, ruler, city names) without the title text and the clocks */',
-         'extern const uint8_t hist_chars[1000];', 'extern const uint8_t hist_attrs[1000];', '',
+         '/* The static screens (map, title line, ruler, city names) without the title text and the clocks:',
+         '   the period screen (Pacific in the middle) and the continents swapped (Atlantic in the middle) */',
+         'extern const uint8_t hist_chars[1000];', 'extern const uint8_t hist_attrs[1000];',
+         'extern const uint8_t hist_atl_chars[1000];', 'extern const uint8_t hist_atl_attrs[1000];', '',
          '/* Row 0: the title for the European (WORLD CLOCK) and the Japanese CG-ROM (hiragana, set 1) */',
          'extern const uint8_t hist_title_eu_chars[40];', 'extern const uint8_t hist_title_eu_attrs[40];',
          'extern const uint8_t hist_title_jp_chars[40];', 'extern const uint8_t hist_title_jp_attrs[40];', '',
@@ -144,17 +208,19 @@ def write_c(data, outdir, src):
          '#define HIST_BAR_ATTR 0x%02X' % (COLOURS.index(bar[3]) << 4), '#define HIST_BAR_CHAR 0x%02X' % bar[4], '',
          '/* DST rules of the clocks */']
     h += ['#define DST_%s %d' % (r.upper(), i) for i, r in enumerate(DST_RULES)]
-    h += ['', 'struct hist_clock {', '    uint8_t row, col;      /* HH:MM in yellow */',
+    h += ['', 'struct hist_clock {', '    uint8_t row, col;      /* HH:MM in yellow, period view */',
+          '    uint8_t row_atl, col_atl;  /* continents swapped */',
           '    int16_t utc_minutes;   /* standard time offset */', '    uint8_t dst;           /* DST_... */', '};', '',
           '#define HIST_CLOCKS %d' % len(data['clocks']), 'extern const struct hist_clock hist_clocks[HIST_CLOCKS];',
           '#define HIST_CLOCK_ATTR 0x%02X' % (COLOURS.index('yellow') << 4), '', '#endif', '']
     c = [gen, '#include "historic.h"', '',
-         c_array('hist_chars', base.chars), c_array('hist_attrs', base.attrs),
+         c_array('hist_chars', pac.chars), c_array('hist_attrs', pac.attrs),
+         c_array('hist_atl_chars', atl.chars), c_array('hist_atl_attrs', atl.attrs),
          c_array('hist_title_eu_chars', titles['EU'][0]), c_array('hist_title_eu_attrs', titles['EU'][1]),
          c_array('hist_title_jp_chars', titles['JP'][0]), c_array('hist_title_jp_attrs', titles['JP'][1]),
          'const struct hist_clock hist_clocks[HIST_CLOCKS] = {']
-    for row, col, name, off, rule in data['clocks']:
-        c.append('    {%d, %d, %d, DST_%s},   /* %s */' % (row, col, off, rule.upper(), name))
+    for (row, col, name, off, rule), (ra, ca) in zip(data['clocks'], clock_positions(data, 'atlantic')):
+        c.append('    {%d, %d, %d, %d, %d, DST_%s},   /* %s */' % (row, col, ra, ca, off, rule.upper(), name))
     c += ['};', '']
     with open(os.path.join(outdir, 'historic.h'), 'w', newline='\n') as f:
         f.write('\n'.join(h))
@@ -166,9 +232,9 @@ def write_png(data, prefix, tokyo, bar_cells):
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import cgrom
     hh, mm = map(int, tokyo.split(':'))
-    for t in ('EU', 'JP'):
-        s = compose(data, t)
-        for row, col, name, off, rule in data['clocks']:
+    for t, view, suffix in (('EU', 'pacific', 'eu'), ('JP', 'pacific', 'jp'), ('EU', 'atlantic', 'eu-atl')):
+        s = compose(data, t, view)
+        for (row, col), (_, _, name, off, rule) in zip(clock_positions(data, view), data['clocks']):
             # the photos show standard time; Tokyo is UTC+9
             m = (hh * 60 + mm - 540 + off) % 1440
             for k, code in enumerate(to_display('%02d:%02d' % (m // 60, m % 60))):
@@ -177,7 +243,7 @@ def write_png(data, prefix, tokyo, bar_cells):
         for k in range(min(bar_cells, cells)):
             s.put(row, col + k, code, colour)
         w, h, rows = cgrom.render_screen(cgrom.load(t), s.chars, s.attrs, 2)
-        cgrom.write_png('%s-%s.png' % (prefix, t.lower()), w, h, rows)
+        cgrom.write_png('%s-%s.png' % (prefix, suffix), w, h, rows)
 
 
 def main():
