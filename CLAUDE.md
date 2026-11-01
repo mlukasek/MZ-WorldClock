@@ -9,7 +9,10 @@ nenašel, předlohou jsou dobové fotky ([docs/zdroje.md](docs/zdroje.md)).
 
 - **Jeden MZF** pro MZ-700 EU (PAL, 1Z-013A), MZ-700 JP (NTSC, 1Z-009, japonský CG-ROM), MZ-800 a MZ-1500 (jako
   japonský MZ-700). Stroj se pozná za běhu. MZ-800 podle GDG, ne podle ROM.
-- **Historický vzhled** v textovém režimu MZ-700 na všech strojích. **Moderní vzhled** v grafice 320×200 jen na MZ-800.
+- **Historický vzhled** v textovém režimu MZ-700 na všech strojích. **Moderní vzhled** v grafice 320×200 jen na MZ-800:
+  mapa a digitální a ručičkové hodiny, s rozšířením VRAM v 16 barvách.
+- **Stav:** v1.0 vydaná 2026-11-01 (GitHub release), otestovaná na reálném MZ-800. Ovládání: mezerník, šipky ← →,
+  CR, BREAK.
 - **Čas** z Unicard RTC (místní čas), jinak se zadá.
 - **Později port na SAPI-1** (CGA-1V).
 - **Co nejvíc kódu v C** (z88dk nightly), asm jen tam, kde je to nutné.
@@ -27,7 +30,8 @@ Autor: Martin Lukášek. Komunikace **česky**.
 - **Kód:**
   - `src/core/`: přenositelné C bez HW;
   - `src/mz/`: HAL Sharp, vlastní `crt0.asm` (exec 2000h, load 1200h se studenou částí, DI, SP C000h, BSS A000h);
-  - `tools/`: generátory v Pythonu, `mkmzf.py`, `emu/mzemu.py` (ovládání emulátoru přes MCP rouru);
+  - `tools/`: generátory v Pythonu, `mkmzf.py`, referenční renderery `modref.py` a `clockref.py`, snímky pro README
+    `screenshots.py`, `emu/mzemu.py` (ovládání emulátoru přes MCP rouru);
   - `tests/`.
 - `input/`: cizí materiály bez licence, jen lokálně (v `.gitignore`).
 - **Emulátor:** `..\mz800emu-2.0.5-preview\`, zdrojáky `..\mz800emu` jen ke čtení. Sesterský projekt se stejným stylem

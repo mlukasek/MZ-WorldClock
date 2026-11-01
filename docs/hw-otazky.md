@@ -1,6 +1,6 @@
 # Otázky k ověření na reálném HW
 
-Reálné stroje má autor. U každé otázky je, proč na ní záleží.
+Reálné stroje má autor. U každé otázky je, proč na ní záleží. **Ověřeno** = vyzkoušeno na reálném stroji.
 
 ## Výsledky (autor, 2026-11-01)
 
@@ -36,9 +36,12 @@ Reálné stroje má autor. U každé otázky je, proč na ní záleží.
      stroji bez rozšíření musí být hodiny ve 4 barvách (černá, modrá, červená, žlutá), test to jen simuluje.
    - S rozšířením: 16 barev (DMD 02h), barvy 4–15 jdou mimo paletu. Odpovídají barvy emulátoru (titulek
      světle azurový, jména světle červená, ciferník ve dne světle modrý)?
-7. **Přechody klávesou G:** obrazovka má na chvíli zčernat a pak se nový vzhled kreslí na čisto. Neproblikne mezi
-   tím na reálném MZ-800 nějaký nepořádek (zbytky textu, CG-RAM)?
+   - **Ověřeno s rozšířením:** program ho pozná, barvy jsou v pořádku. Bez rozšíření zatím neověřeno.
+7. **Přechody mezi vzhledy (šipky, G):** obrazovka má na chvíli zčernat a pak se nový vzhled kreslí na čisto.
+   Neproblikne mezi tím na reálném MZ-800 nějaký nepořádek (zbytky textu, CG-RAM)?
+   - **Ověřeno:** funguje. Lupnutí reproduktoru při přechodu do grafiky bylo opravené (rozhodnuti.md).
 8. **Nahrání od 1200h** v režimu MZ-800 (SW1) z Unicard Manageru, UniCMT a z kazety.
+   - **Ověřeno** z Unicard (verze v1.0 na reálném MZ-800 funguje). Z kazety neověřeno.
 
 ## Unicard
 

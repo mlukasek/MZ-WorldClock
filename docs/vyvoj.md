@@ -14,8 +14,9 @@
 - **Fáze 3 (Unicard RTC) hotová:** čas z karty při startu, dorovnání každých 10 minut, zápis do karty z dialogu.
 - **Fáze 4 (MZ-800) hotová:**
   - vlastní znaky v CG-RAM (hiragana titulku, pruh po 1 s), na MZ-1500 pruh po 1 s přes PCG;
-  - moderní vzhled 320×200 (klávesa G): mapa s dnem a nocí, domovské pásmo, 9 měst, domovský čas, pruh sekund;
-  - klávesa M prohodí kontinenty v obou vzhledech.
+  - moderní vzhled 320×200 (klávesa G, dnes šipky): mapa s dnem a nocí, domovské pásmo, 9 měst, domovský čas, pruh
+    sekund;
+  - klávesa M (dnes mezerník) prohodí kontinenty v obou vzhledech.
 - **Fáze 5 (hodiny) hotová:**
   - G na MZ-800 cyklí historický vzhled → mapa → digitální hodiny → ručičkové hodiny, vždy přes černou obrazovku;
   - hodiny v barvách originálu, s rozšířením VRAM v 16 barvách, bez něj ve 4;
@@ -70,11 +71,12 @@ nic nemění.
 | Soubor | Co dělá |
 |---|---|
 | `src/mz/crt0.asm` | start na 2000h: `JP start`, testovací blok na 2003h, DI, SP C000h, BSS A000h; studená část od 1200h |
+| `src/mz/main.c` | hlavní smyčka (jeden průchod za snímek), vzhledy (`look`: historický, mapa, digitální, ručičkové), klávesy, nápověda po startu |
 | `src/mz/machine.c` | detekce (signatura ROM, GDG přes port CEh, počet řádků), přepnutí MZ-800 do režimu MZ-700, konec do monitoru s nastavenými hodinami (TIMST) |
 | `src/mz/timebase.c` | CTC1 1 Hz z HSYNC, CTC2 čítač sekund, `clock_set` / `clock_now`, čekání na VBLK |
 | `src/mz/kbd.c` | matice klávesnice přes 8255 |
 | `src/mz/text700.c` | textová obrazovka, ASCII → kód displeje |
-| `src/mz/histview.c` | historická obrazovka: hodiny měst (po minutě postupně, jedno město za snímek), dvojtečky, pruh |
+| `src/mz/histview.c` | historická obrazovka: hodiny měst (po minutě postupně, jedno město za snímek), dvojtečky, pruh; atlantický pohled po sloupcích (`hist_atl_col`), titulek podle pohledu, nápověda kláves v řádku 24 (`hist_hint`) |
 | `src/mz/cgram.c`, `pcg1500.c` | vlastní znaky: CG-RAM MZ-800, PCG MZ-1500 |
 | `src/mz/gfx800.c` | grafika MZ-800: přechody přes černou obrazovku (`gfx_begin`, `gfx_end`), detekce rozšíření VRAM, 4 nebo 16 barev, text se stínem, bod |
 | `src/mz/gfx.asm` | kreslení barvou přes zápis PSET/REPLACE: text 1×, 2×2 a 4×6 (`gfx_ctext`), text na libovolný bod (`gfx_ptext`), vodorovný úsek, úsečka |
@@ -83,20 +85,21 @@ nic nemění.
 | `src/mz/hw.asm` | porty, 8255/8253 v obou režimech (`io_rd`, `io_wr`), řádek mapy do VRAM (`row_out`), dekódování pevniny (`land_decode`), volání monitoru |
 | `src/mz/rtc_unicard.c` | Unicard: REVD, čtení a zápis RTC (porty 50h/51h) |
 | `src/mz/rtcsync.c` | čas z karty: start na hraně sekundy, dorovnání každých 10 minut, zápis z dialogu |
-| `src/mz/setup.c` | dialog datum / čas / domovské pásmo (klávesa `T`, bez času hned po startu) |
+| `src/mz/setup.c` | dialog datum / čas / domovské pásmo (klávesa `CR` nebo `T`, bez času hned po startu); ve studené části |
 | `src/core/wctime.c`, `zones.c` | přenositelné jádro času a seznam pásem |
 | `build/gen/historic.c` | generovaná data obrazovky (`tools/mkhistoric.py`) |
 | `build/gen/glyphs.c`, `modern.c` | vlastní znaky (`tools/mkglyphs.py`), data moderního vzhledu (`tools/mkmodern.py`) |
 
 **Testovací blok na 2003h** (`struct test_hook`, `src/mz/machine.h`):
-- `"WCTH"`, příznaky (bit 0 = čas platí, bez dialogu), UTC (4 bajty), rezerva;
+- `"WCTH"`, příznaky (bit 0 = čas platí, bez dialogu; bit 1 = chovat se jako bez rozšíření VRAM), UTC (4 bajty),
+  rezerva;
 - testy ho zapisují přes `mem_write` po nahrání a před startem;
 - program navíc ukládá poslední přečtený čas do `tb_last_utc` / `tb_last_frac`, testy je čtou podle `build/worldclock.map`.
 
 ## Data a generátory
 
 - **`data/historic.txt`** popisuje historickou obrazovku: mapu 80×50 bloků, texty, titulky EU a JP, pruh a hodiny
-  s pásmy.
+  s pásmy, a atlantický pohled jako rozsahy sloupců znaků (`map FIRST END AT`).
   - `python tools/mkhistoric.py data/historic.txt build/gen` vytvoří `historic.c` a `.h`.
   - `python tools/mkhistoric.py data/historic.txt --png work/historic` vytvoří náhledy s fontem CG-ROM.
 - **`tools/cgrom.py`** načítá CG-ROM ze zdrojů emulátoru, jen lokálně, do repa se nedávají. Vykresluje tabulky znaků
@@ -106,8 +109,9 @@ nic nemění.
 - **`data/glyphs.txt`**: vlastní znaky 8×8, `tools/mkglyphs.py` z nich dělá `glyphs.c`.
 - **`data/world_land.txt`, `world_zones.txt`**: pevnina 320×160 a pásma 160×80 jako text, z Natural Earth (public
   domain).
-  - `python tools/mkmodern.py build/gen` z nich a z `CITIES` vytvoří `modern.c` a `.h` (RLE, tabulky Slunce, města,
-    místa popisků).
+  - `python tools/mkmodern.py build/gen` z nich a z `CITIES` vytvoří `modern.c` a `.h`: RLE pevniny (běhy, 255
+    pokračuje), pásma (běh v jednom bajtu: ID << 4 | délka − 1), tabulky Slunce, města, místa popisků, geometrie
+    a tabulky hodin.
   - `python tools/mkmodern.py --from-naturalearth` je přegeneruje ze shapefilů v `input/naturalearth/`
     (`tools/worldmap.py`).
   - `python tools/mkmodern.py --png work/modern --utc ...` vykreslí referenční obrazovky.
@@ -125,11 +129,14 @@ nic nemění.
 - **Program:** `build.cmd` (zsdcc) vytvoří `build/worldclock.mzf` a vypíše, kolik místa zbývá v obou částech.
   - Jen zsdcc: s sccz80 se program nevejde (studená část by končila za 2000h) a `gfx.asm` počítá s konvencí
     zsdcc. Jádro času a smoke test jdou přeložit oběma.
-  - Spouštět z `cmd` / PowerShellu (`cmd /c build.cmd`); z Git Bashe se .cmd nespustí.
+  - Spouštět z `cmd` / PowerShellu (`cmd /c build.cmd`). Z Git Bashe přímo ne, jen přes
+    `cmd //c "E:\SHARP_GIT\MZ-WorldClock\build.cmd"` (plná cesta).
 - **Emulátor:** `python tests/emu/run_wc.py [--machine eu|jp|eu-ntsc|mz800|mz1500]` na všech strojích kontroluje:
   - detekci (model, JP, NTSC, řádky, dělitel);
-  - titulek a časy 9 měst proti `zoneinfo`;
+  - titulek a časy 9 měst proti `zoneinfo`, v obou pohledech (mezerník a M zpět);
   - pruh sekund;
+  - nápovědu kláves po startu a že po 600 snímcích zmizí;
+  - CR do dialogu času a BREAK z něj;
   - návrat do monitoru po BREAK.
 - **Další varianty běhu:**
   - `--dialog`: čas se zadá klávesami do dialogu;
@@ -139,13 +146,13 @@ nic nemění.
   - `--drift 60`: hodina emulovaného času, porovnání hodin s emulátorem. Na PAL vychází −2,54 s/h, na NTSC
     +4,59 s/h. Emulátor jede přesně 50/60 Hz, program dělí reálnými 15611/15700. Trvá asi 3,5 min.
 - **Vzhledy MZ-800:** `python tests/emu/run_modern.py [--utc ...]` porovná VRAM bajt po bajtu s referencí:
-  - mapa (roviny I–IV, 16 barev, `tools/modref.py`): po G, po M (atlantický pohled), po změně minuty, po
-    návratu M;
+  - mapa (roviny I–IV, 16 barev, `tools/modref.py`): po →, po mezerníku (atlantický pohled), po změně minuty,
+    po návratu M;
   - hodiny (roviny I–IV, `tools/clockref.py`): digitální po G a o sekundu později, ručičkové po G a po změně
     minuty;
-  - G zpět (historická obrazovka a vlastní znaky v CG-RAM) a BREAK (CG-RAM obnovená z CG-ROM);
-  - totéž ještě jednou bez rozšíření VRAM (příznak `TEST_NO_EXTVRAM` v testovacím bloku): mapa a hodiny ve
-    4 barvách.
+  - → zpět (historická obrazovka a vlastní znaky v CG-RAM) a BREAK (CG-RAM obnovená z CG-ROM);
+  - totéž ještě jednou bez rozšíření VRAM (příznak `TEST_NO_EXTVRAM` v testovacím bloku), šipkou ← pozpátku:
+    ručičkové, digitální, mapa ve 4 barvách, historický vzhled.
 
 - **Jádro času:** `python tests/core/run_core.py [--cc sdcc|sccz80]`.
   - Přeloží `tests/core/test_wctime.c` pro `+test` a spustí ho v `z88dk-ticks`.
@@ -156,7 +163,8 @@ nic nemění.
   - běh: `python tests/smoke/run_smoke.py --cc sccz80|sdcc` na všech čtyřech strojích kontroluje text na obrazovce,
     zásobník a BREAK do monitoru;
   - snímky ukládá do `work/smoke/`.
-- **MZF skládá `tools/mkmzf.py`**, ne appmake. Jméno s mezerou a kontrola, že program končí pod 8000h.
+- **MZF skládá `tools/mkmzf.py`**, ne appmake. Jméno s mezerou; `--cold FILE@1200` přidá studenou část před
+  hlavní, mezeru doplní nulami a hlídá, že studená končí pod 2000h a hlavní pod 8000h.
 
 Volby zcc pro MZ:
 - `zcc +mz -crt0=src\mz\crt0.asm -pragma-define:CRT_ENABLE_STDIO=0 -pragma-define:CLIB_OPEN_MAX=0 -m`;
@@ -165,6 +173,11 @@ Volby zcc pro MZ:
 
 ## Pasti
 
+- **Prostředí (Windows, Git Bash):**
+  - `sed -i` v Git Bashi převede CRLF na LF. `build.cmd` musí mít CRLF: upravovat ho editorem nebo Pythonem po
+    bajtech a zkontrolovat `file build.cmd`.
+  - Heredoc s Pythonem v Bashi pokazí zpětná lomítka a uvozovky (soubory se tím už jednou rozbily). Delší úpravy
+    psát do skriptu v souboru, ne do heredocu.
 - **z88dk:**
   - Klasické `crt_rules.inc` nepřevádí `CRT_ORG_BSS` na `__crt_org_bss`. Dělá to náš crt0.
   - `-Cz--blockname -Cz"JMÉNO S MEZEROU"` rozdělí jméno, proto MZF skládá `tools/mkmzf.py`.
@@ -206,7 +219,13 @@ Volby zcc pro MZ:
     čekají 100 snímků a klávesy drží 3 snímky. Názvy kláves v emulátoru: `SPACE`, `LEFT`, `RIGHT`, `CR`,
     `BREAK`, písmena.
   - Profilovat jde vzorkováním PC: `run` po jednom snímku a `get_registers`, PC přiřadit funkci podle
-    `build/worldclock.map`.
+    `build/worldclock.map` (lokální návěští `l_funkce_NNNNN` patří funkci).
+  - `step_n` (krokování po instrukcích) je přes MCP tak pomalé, že na jemné vzorkování nestačí. Stav periferií
+    v zastavených místech ukáže breakpoint a `get_periph_i8253`, `get_periph_i8255`, `get_periph_gdg`.
+  - `screenshot_save_to_file` uloží celý snímek i s okrajem (928×288, řádky nezdvojené, obraz svisle stlačený
+    2:1). Pro README dělá snímky `tools/screenshots.py` z VRAM.
+  - Názvy a polohy kláves v matici vypíše `get_input_keyboard_matrix_info`, co je stisknuté,
+    `get_input_keyboard_state`.
 - **Hardware** (podrobnosti v [rozhodnuti.md](rozhodnuti.md)):
   - **GDG MZ-800 (mz800emu `vramctrl.c`):** zápis WF (CCh) bity 0–3 roviny, bit 4 banka, bity 5–7 režim. SINGLE,
     EXOR, OR a RESET píšou do vybraných rovin, v 320×200 i do III a IV. REPLACE a PSET píšou do rovin režimu: ve
@@ -219,6 +238,9 @@ Volby zcc pro MZ:
     paletu, ostatní jsou IGRB přímo. Se skupinou 0 a paletou 0, 1, 2, 3 jsou všechna čísla barev IGRB.
   - Na MZ-800 mapuje `IN (E0h)` v režimu 320×200 VRAM na 8000h–9FFFh a CG-ROM na 1000h–1FFFh současně. Kód, který
     běží s namapovanou VRAM, ani jeho data nesmí ležet v 1000h–1FFFh ani 8000h–9FFFh.
+  - **`OUT (E4h)` na MZ-800 v jeho vlastním režimu** mapuje všechny ROM, CG-ROM na 1000h a VRAM na 8000h. Program
+    proto po startu nejdřív přepne do režimu MZ-700 (`OUT (CEh),08h`) a `OUT (E4h)` zopakuje. Teprve pak je
+    1000h–1FFFh RAM a smí se volat studená část.
   - Na MZ-700 nikdy nedělat `IN (E0h)`.
   - V nativním režimu MZ-800 je 8255/8253 na portech D0h–D7h a na E000h jsou registry nedostupné.
   - Do 8255 PA zapisovat `F0h | sloupec`. PA4/PA5 jsou strobe joysticku, PA7=0 nuluje časovač kurzoru.

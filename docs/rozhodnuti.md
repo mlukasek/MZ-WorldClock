@@ -1,6 +1,7 @@
 # Rozhodnutí
 
-Nová rozhodnutí dopisovat na konec, s datem a důvodem.
+Nová rozhodnutí dopisovat na konec, s datem a důvodem. Starší záznamy popisují stav v době rozhodnutí; co se
+později změnilo, je poznamenané u nich a popsané v novějším záznamu (např. klávesy: dnes mezerník, šipky, CR).
 
 ## 2026-11-01: zadání (autor)
 
@@ -157,7 +158,7 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 
 - **Výchozí je dobový pohled**, Pacifik uprostřed.
 - **M prohodí kontinenty:** Amerika vlevo, Evropa uprostřed, Asie vpravo, jak je dnes zvykem v Evropě. Další M vrátí
-  dobový pohled.
+  dobový pohled. (Dnes hlavně mezerník, M zůstává, viz ovládání.)
 - **Mapa se skládá po rozsazích sloupců znaků** (`map` v sekci `[atlantic]`, v programu tabulka `hist_atl_col`).
   Řez je ve sloupci bloků 44, ten je prázdný (Pacifik), takže se žádná pevnina nerozdělí a mozaika se posouvá po
   celých znacích.
@@ -172,7 +173,8 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   řádcích (TOKYO 19–23, L.ANGELS 22–29), každý řez by některý rozdělil.
   - Co by přeteklo přes okraj, může mít vlastní místo (sekce `[atlantic]` v `data/historic.txt`). Dnes nic.
   - `tools/mkhistoric.py` kontroluje, že nic nepřetéká a nic se nepřekrývá.
-- **Přepínání historického a moderního vzhledu na MZ-800** proto nebude na M, ale na **G** (grafika).
+- **Přepínání historického a moderního vzhledu na MZ-800** proto nebude na M, ale na **G** (grafika). (Dnes šipky
+  ← →, G zůstává jako →.)
 - **Titulek podle pohledu** (autor): hiragana (せかいどけい) jen s Tokiem uprostřed, tj. v dobovém pohledu.
   S Evropou uprostřed je `WORLD CLOCK` i na strojích s hiraganou (japonský MZ-700, MZ-1500, MZ-800).
 
@@ -220,7 +222,8 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 
 ## 2026-11-01: moderní vzhled MZ-800 (autor schválil prototyp, varianta A)
 
-- **Klávesa G** přepíná historický a moderní vzhled (jen MZ-800). M prohazuje kontinenty v obou vzhledech.
+- **Klávesa G** přepíná historický a moderní vzhled (jen MZ-800). M prohazuje kontinenty v obou vzhledech. (Dnes
+  šipky a mezerník, viz ovládání.)
 - **Barvy (paleta A):** 0 noční moře černé, 1 denní moře modré (#4040AC), 2 pevnina zelená, v noci s černým
   rastrem, 3 texty, značky a okraj pásma světle žluté.
   - Rovina I = moře ve dne, rovina II = pevnina ve dne nebo rastr v noci.
@@ -241,14 +244,18 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Města:** 9 jako na historické obrazovce (TOKYO, PEKING, MOSCOW, PARIS, WASHINGTON, L.ANGELES, RIO, S.AFRICA,
   SYDNEY). Značka je křížek, domovské město má větší. Popisky (jméno a HH:MM) jsou zarovnané na bajty, s černým
   stínem; jejich místa pro oba pohledy hledá `tools/mkmodern.py`.
-- **Atlantický pohled (M)** je stejná mapa pootočená o 128 bodů (16 bajtů).
+- **Atlantický pohled (mezerník, M)** je stejná mapa pootočená o 128 bodů (16 bajtů). Grafická mapa má skutečné
+  délky, takže na rozdíl od dobové mozaiky (oddíl o prohození kontinentů) nepotřebuje skládání po částech.
 - **Ověření:** `tools/modref.py` počítá stejnou celočíselnou aritmetikou, test porovnává VRAM bajt po bajtu.
-- **Rychlost:** překreslení po G trvá asi 1,5 s, po M asi 1,4 s. Řádek mapy se skládá v asm (`land_decode`,
-  `row_out`); většinu zbytku tvoří zápisy do VRAM a texty.
+- **Rychlost:** překreslení po G trvá asi 1,5 s, po M asi 1,4 s (původně 2,4 a 2,2 s). Řádek mapy se skládá
+  v asm (`land_decode`, `row_out`); většinu zbytku tvoří zápisy do VRAM a texty.
+  - Měřeno vzorkováním PC v emulátoru. Nejvíc pomohlo dekódování pevniny v asm po celých bajtech, okraj pásma
+    spočítaný jednou (cache, poprvé už po startu) a šířka dne spočítaná jednou za den.
 
 ## 2026-11-01: hodiny na MZ-800 (fáze 5, autor)
 
 - **Klávesa G cyklí vzhledy MZ-800:** historický → mapa → digitální hodiny → ručičkové hodiny → historický.
+  (Dnes šipky ← → oběma směry, G zůstává jako →.)
   M platí pro historický vzhled a mapu, na hodinách nedělá nic.
 - **Přechod:** obrazovka nejdřív zčerná, pak se přepne režim a nakonec se kreslí (autor).
   - Z režimu MZ-700: atributy textu na 0, pak černá paleta a DMD 00h. Obrazovka je černá, ať je ve VRAM cokoli.
