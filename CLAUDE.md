@@ -52,5 +52,7 @@ Autor: Martin Lukášek. Komunikace **česky**.
 - **Emulátor spouštět jen přes `mzemu.py`** (vlastní ini, `--no-save-ini`). Soubory v jeho složce neměnit.
 - **Reálný HW má autor.** Otázky k ověření sbírat v `docs/hw-otazky.md`.
 - **Každá změna:**
-  - smoke test, dokud není hlavní program: `tests\smoke\build_smoke.cmd` a `python tests/smoke/run_smoke.py`;
-  - pak testy podle `docs/vyvoj.md` na všech emulovaných strojích.
+  - `cmd /c build.cmd`;
+  - `python tests/emu/run_wc.py`, `--dialog` a `--native-boot` na všech emulovaných strojích;
+  - po změně jádra času `python tests/core/run_core.py`;
+  - po změně časové základny i `--drift 60`.

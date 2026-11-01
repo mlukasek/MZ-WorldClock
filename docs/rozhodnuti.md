@@ -81,3 +81,22 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   - čas v přeskočené hodině se bere jako standardní.
 - **Ověření:** `tests/core/run_core.py` proti `zoneinfo` (Python, balíček tzdata).
   - Každý přechod 2008–2099 v 11 pásmech ±1 s a ±1 h, plus náhodné časy.
+
+## 2026-11-01: historický vzhled a čas
+
+- **Časová základna** (`src/mz/timebase.c`), bez přerušení a s DI:
+  - CTC1 v režimu 2 dělí HSYNC na 1 Hz (počet 15611 PAL / 15700 NTSC, jako TIMST monitoru);
+  - CTC2 v režimu 0 s počtem 0 je volně běžící čítač sekund, PC2=0 maskuje INT;
+  - CTC2 se načítá trikem z TIMST: CTC1 dočasně s počtem 10;
+  - čtení CTC2, CTC1, CTC2 se opakuje, dokud se CTC2 nezmění;
+  - `clock_set` restartuje CTC1, takže nová sekunda začíná přesně v okamžiku nastavení.
+- **PAL / NTSC se měří:** řádky mezi dvěma VBLK přes CTC1, tj. 312 nebo 262. Nebere se z ROM.
+- **Dvojtečky blikají 1 Hz:** svítí v první polovině sekundy. Originál nebyl k dispozici, fotky ukazují dvojtečky.
+- **Pruh:** po minutě prázdný, každé 2 s o buňku víc, plný (30) v poslední sekundě minuty.
+- **Výchozí domovské pásmo:** Praha (EU stroje), Tokio (japonský monitor).
+- **Dialog:**
+  - sekundy začínají od 0 v okamžiku stisku CR;
+  - bez času po startu nabídne `BREAK` konec do monitoru.
+- **Konec:**
+  - před návratem se čeká na uvolnění kláves, aby monitor neviděl BREAK;
+  - hodiny monitoru se nastaví na místní čas domovského pásma (TIMST), PC2=1, EI, smaže se obrazovka.

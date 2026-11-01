@@ -8,19 +8,18 @@
 - **Fáze 1 (předloha) hotová:**
   - `data/historic.txt` zrekonstruovaný z katalogu 3/1983 ([original.md](original.md));
   - generátor `tools/mkhistoric.py` (C tabulky a náhled PNG).
-- **Další krok:** fáze 2, bezpečný základ a historický vzhled.
+- **Fáze 2 (základ a historický vzhled) hotová:**
+  - `build.cmd` vytvoří `build/worldclock.mzf`, jeden program pro MZ-700 EU, MZ-700 JP a MZ-800;
+  - testy v emulátoru procházejí na všech strojích, včetně nativního startu MZ-800 a hodinového běhu.
+- **Další krok:** fáze 3, Unicard RTC.
 
 ## Plán vývoje
 
 0. **Založení:** git, GPL-3.0, docs, `tools/emu`, smoke test vlastního crt0 na všech strojích. **Hotovo.**
    Repo: https://github.com/mlukasek/MZ-WorldClock.
 1. **Rekonstrukce předlohy** (`data/historic.txt`, [original.md](original.md)). **Hotovo.**
-2. **Bezpečný základ a historický vzhled:**
-   - start, konec a detekce na všech strojích, včetně nativního startu MZ-800 a obnovy CG-RAM;
-   - timebase, klávesnice;
-   - jádro času v C (UTC, letní čas);
-   - historická obrazovka;
-   - dialog `T` (datum, čas, pásmo).
+2. **Bezpečný základ a historický vzhled.** **Hotovo.** Obnova CG-RAM při konci přijde ve fázi 4, až ji program
+   bude měnit.
 3. **Unicard RTC:** detekce, čtení, dorovnávání.
 4. **MZ-800:**
    - hiragana v CG-RAM;
@@ -50,6 +49,25 @@ Emulované stroje (`tools/emu/mzemu.py`, `Emu(exe, rom=..., unicard=...)`):
 `mzemu.py` píše vlastní ini do `build/emu/<exe>.ini` a emulátor spouští s `--no-save-ini`. Ve složce emulátoru se
 nic nemění.
 
+## Program
+
+| Soubor | Co dělá |
+|---|---|
+| `src/mz/crt0.asm` | start na 2000h: `JP start`, testovací blok na 2003h, DI, SP 8000h, BSS A000h |
+| `src/mz/machine.c` | detekce (signatura ROM, počet řádků), přepnutí MZ-800 do režimu MZ-700, konec do monitoru s nastavenými hodinami (TIMST) |
+| `src/mz/timebase.c` | CTC1 1 Hz z HSYNC, CTC2 čítač sekund, `clock_set` / `clock_now`, čekání na VBLK |
+| `src/mz/kbd.c` | matice klávesnice přes 8255 |
+| `src/mz/text700.c` | textová obrazovka, ASCII → kód displeje |
+| `src/mz/histview.c` | historická obrazovka: hodiny měst (po minutě postupně, jedno město za snímek), dvojtečky, pruh |
+| `src/mz/setup.c` | dialog datum / čas / domovské pásmo (klávesa `T`, bez času hned po startu) |
+| `src/core/wctime.c`, `zones.c` | přenositelné jádro času a seznam pásem |
+| `build/gen/historic.c` | generovaná data obrazovky (`tools/mkhistoric.py`) |
+
+**Testovací blok na 2003h** (`struct test_hook`, `src/mz/machine.h`):
+- `"WCTH"`, příznaky (bit 0 = čas platí, bez dialogu), UTC (4 bajty), rezerva;
+- testy ho zapisují přes `mem_write` po nahrání a před startem;
+- program navíc ukládá poslední přečtený čas do `tb_last_utc` / `tb_last_frac`, testy je čtou podle `build/worldclock.map`.
+
 ## Data a generátory
 
 - **`data/historic.txt`** popisuje historickou obrazovku: mapu 80×50 bloků, texty, titulky EU a JP, pruh a hodiny
@@ -62,6 +80,19 @@ nic nemění.
   mapu. Postup je v [original.md](original.md).
 
 ## Překlad a testy
+
+- **Program:** `build.cmd` (zsdcc) nebo `build.cmd sccz80` vytvoří `build/worldclock.mzf`.
+  - Spouštět z `cmd` / PowerShellu (`cmd /c build.cmd`); z Git Bashe se .cmd nespustí.
+- **Emulátor:** `python tests/emu/run_wc.py [--machine eu|jp|eu-ntsc|mz800]` na všech strojích kontroluje:
+  - detekci (model, JP, NTSC, řádky, dělitel);
+  - titulek a časy 9 měst proti `zoneinfo`;
+  - pruh sekund;
+  - návrat do monitoru po BREAK.
+- **Další varianty běhu:**
+  - `--dialog`: čas se zadá klávesami do dialogu;
+  - `--native-boot`: MZ-800 nastartovaný v režimu MZ-800. Simuluje se kódem na 1200h, preview to neumí.
+  - `--drift 60`: hodina emulovaného času, porovnání hodin s emulátorem. Na PAL vychází −2,54 s/h, na NTSC
+    +4,59 s/h. Emulátor jede přesně 50/60 Hz, program dělí reálnými 15611/15700. Trvá asi 3,5 min.
 
 - **Jádro času:** `python tests/core/run_core.py [--cc sdcc|sccz80]`.
   - Přeloží `tests/core/test_wctime.c` pro `+test` a spustí ho v `z88dk-ticks`.

@@ -1,0 +1,96 @@
+/* Time base in the 8253 without interrupts (see timebase.h and docs/vyvoj.md).
+ *
+ * CTC1 mode 2, count = line frequency: one OUT1 pulse per second (as the monitor's TIMST).
+ * CTC2 mode 0, count 0: decrements on each OUT1 pulse and keeps wrapping, a free-running seconds counter.
+ * OUT2 would raise INT when it reaches 0, so PC2 stays 0 (machine.c) and interrupts stay disabled. */
+#include "timebase.h"
+#include "hw.h"
+
+uint16_t tb_line_hz;
+wc_time_t tb_last_utc;        /* the last clock_now() result, for the emulator tests */
+uint16_t tb_last_frac;
+static uint16_t base_c2;      /* CTC2 at base_utc */
+static wc_time_t base_utc;
+
+static uint16_t read_ctc1(void)
+{
+    uint8_t lo;
+
+    CTC_CTRL = 0x40;          /* latch counter 1 */
+    lo = CTC_1;
+    return lo | (uint16_t)CTC_1 << 8;
+}
+
+static uint16_t read_ctc2(void)
+{
+    uint8_t lo;
+
+    CTC_CTRL = 0x80;          /* latch counter 2 */
+    lo = CTC_2;
+    return lo | (uint16_t)CTC_2 << 8;
+}
+
+void tb_wait_frame(void)
+{
+    while (!(PPI_PC & 0x80))  /* until the screen is drawn (/VBLK = 1) */
+        ;
+    while (PPI_PC & 0x80)     /* until the blanking starts */
+        ;
+}
+
+uint16_t tb_measure_lines(void)
+{
+    uint16_t a;
+
+    CTC_CTRL = 0x74;          /* CTC1 mode 2, count 65536: a line counter */
+    CTC_1 = 0;
+    CTC_1 = 0;
+    tb_wait_frame();
+    tb_wait_frame();
+    a = read_ctc1();
+    tb_wait_frame();
+    return a - read_ctc1();
+}
+
+void tb_init(uint16_t line_hz)
+{
+    tb_line_hz = line_hz;
+    CTC_CTRL = 0x74;          /* CTC1 mode 2 */
+    CTC_CTRL = 0xB0;          /* CTC2 mode 0 */
+    CTC_2 = 0xFE;             /* count FFFEh: a value to recognise once loaded */
+    CTC_2 = 0xFF;
+    CTC_1 = 10;               /* OUT1 every 10 lines, so that CTC2 loads at once (as TIMST) */
+    CTC_1 = 0;
+    while (read_ctc2() != 0xFFFE)
+        ;
+    clock_set(0);
+}
+
+void clock_set(wc_time_t utc)
+{
+    CTC_CTRL = 0x74;          /* restart CTC1: the next second starts a full second from now */
+    CTC_1 = (uint8_t)tb_line_hz;
+    CTC_1 = (uint8_t)(tb_line_hz >> 8);
+    base_c2 = read_ctc2();
+    base_utc = utc;
+}
+
+wc_time_t clock_now(uint16_t *frac)
+{
+    uint16_t a, c1, c2;
+
+    do {                      /* no read-back command: a consistent pair of CTC2 and CTC1 */
+        a = read_ctc2();
+        c1 = read_ctc1();
+        c2 = read_ctc2();
+    } while (a != c2);
+    *frac = (c1 <= 1 || c1 > tb_line_hz) ? 0 : tb_line_hz - c1;
+    a = base_c2 - c2;         /* seconds since base (CTC2 counts down, wraps after 18 h) */
+    if (a >= 60) {            /* move the base on, so that it never wraps */
+        base_c2 = c2;
+        base_utc += a;
+        a = 0;
+    }
+    tb_last_frac = *frac;
+    return tb_last_utc = base_utc + a;
+}

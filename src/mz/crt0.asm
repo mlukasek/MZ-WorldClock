@@ -45,6 +45,17 @@ ENDIF
 
     org     CRT_ORG_CODE
 
+    jp      start
+
+; Test hook at 2003h, written by the emulator tests (tools/emu) after loading and before running:
+; struct test_hook in src/mz/machine.h. Zero in normal use.
+    PUBLIC  _test_hook
+_test_hook:
+    defm    "WCTH"                      ; 2003h magic
+    defb    0                           ; 2007h flags: bit 0 = utc below is valid, skip the time dialog
+    defb    0, 0, 0, 0                  ; 2008h UTC, seconds since 2000-01-01, little endian
+    defb    0, 0, 0, 0, 0, 0, 0         ; 200Ch reserved
+
 start:
     di
     ld      (__restore_sp_onexit+1),sp  ; the monitor's stack, valid again after the exit
