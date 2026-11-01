@@ -25,8 +25,8 @@ uint8_t kbd_get(void)
     uint8_t key = K_NONE;
 
     for (col = 0; col < 10; ++col) {
-        PPI_PA = 0xF0 | col;          /* PA4-7 high: joystick strobes off, cursor timer runs */
-        now = ~PPI_PB;
+        IO_WR(R_PA, 0xF0 | col);          /* PA4-7 high: joystick strobes off, cursor timer runs */
+        now = ~io_rd(R_PB);
         fresh = now & ~held[col];
         held[col] = now;
         if (fresh && key == K_NONE) {
@@ -48,8 +48,8 @@ void kbd_wait_release(void)
     do {
         any = 0;
         for (col = 0; col < 10; ++col) {
-            PPI_PA = 0xF0 | col;
-            if (PPI_PB != 0xFF)
+            IO_WR(R_PA, 0xF0 | col);
+            if (io_rd(R_PB) != 0xFF)
                 any = 1;
         }
     } while (any);

@@ -146,10 +146,10 @@ def run_machine(name, utc0, dialog, mzf, syms, data, native=False):
         emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s%s%s.png' % (name, '-dialog' if dialog else '',
                                                                        '-native' if native else '')))
         if not dialog:                                  # M: the continents swapped, M again: back
-            emu.key('M', 3, 20)
+            emu.key('M', 3, 50)                  # the redraw takes ~8 frames, the clocks 9 more
             check_screen(emu, data, program_time(emu, syms), hira, errs, 'atlantic', fine, name == 'mz1500')
             emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s-atlantic.png' % name))
-            emu.key('M', 3, 20)
+            emu.key('M', 3, 50)                  # the redraw takes ~8 frames, the clocks 9 more
             check_screen(emu, data, program_time(emu, syms), hira, errs, 'pacific', fine, name == 'mz1500')
         emu.key('BREAK', 5, 30)
         pc = emu.regs().get('PC', emu.regs().get('pc'))

@@ -56,22 +56,53 @@ void hist_half_cgram(uint8_t cell, uint8_t on)
     }
 }
 
+/* The screen is built here and copied to the VRAM at once (on the MZ-700 every VRAM access during the
+   picture waits for the line's blanking, so it is not the place to compute in) */
+static uint8_t scr[2000];
+
 void hist_draw(void)
 {
-    if (hist_view == VIEW_ATLANTIC) {
-        memcpy((uint8_t *)VRAM_TEXT, hist_atl_chars, 1000);
-        memcpy((uint8_t *)VRAM_ATTR, hist_atl_attrs, 1000);
-    } else {
-        memcpy((uint8_t *)VRAM_TEXT, hist_chars, 1000);
-        memcpy((uint8_t *)VRAM_ATTR, hist_attrs, 1000);
+    uint8_t r, c, cs, b, s;
+    const uint8_t *top, *bot;
+    uint8_t *ch, *at;
+    const struct hist_item *it;
+
+    memset(scr, 0, 2000);
+    /* the map: text rows 2-21 from block rows 4-43 (two mask rows of 10 bytes per text row; text column cs
+       is bits 2cs, 2cs+1 of both); the Atlantic view rotated by HIST_ATL_SHIFT columns */
+    for (r = 2; r < 22; ++r) {
+        top = hist_map + (uint16_t)(2 * r - 4) * 10;
+        bot = top + 10;
+        ch = scr + (uint16_t)r * 40;
+        at = ch + 1000;
+        cs = hist_view == VIEW_ATLANTIC ? HIST_ATL_SHIFT : 0;
+        for (c = 0; c < 40; ++c) {
+            s = (cs & 3) << 1;
+            b = ((top[cs >> 2] >> s) & 3) | ((bot[cs >> 2] >> s) & 3) << 2;
+            if (b) {
+                ch[c] = 0xF0 | b;
+                at[c] = 0x10;
+            }
+            if (++cs == 40)
+                cs = 0;
+        }
+    }
+    /* the title line, the ruler, the names */
+    for (it = hist_items; it < hist_items + HIST_ITEMS; ++it) {
+        ch = scr + (hist_view == VIEW_ATLANTIC ? (uint16_t)it->row_atl * 40 + it->col_atl
+                                                : (uint16_t)it->row * 40 + it->col);
+        memcpy(ch, it->codes, it->len);
+        memset(ch + 1000, it->attr, it->len);
     }
     if (mach.jp || hist_hiragana) {
-        memcpy((uint8_t *)VRAM_TEXT, hist_title_jp_chars, 40);
-        memcpy((uint8_t *)VRAM_ATTR, hist_title_jp_attrs, 40);
+        memcpy(scr, hist_title_jp_chars, 40);
+        memcpy(scr + 1000, hist_title_jp_attrs, 40);
     } else {
-        memcpy((uint8_t *)VRAM_TEXT, hist_title_eu_chars, 40);
-        memcpy((uint8_t *)VRAM_ATTR, hist_title_eu_attrs, 40);
+        memcpy(scr, hist_title_eu_chars, 40);
+        memcpy(scr + 1000, hist_title_eu_attrs, 40);
     }
+    memcpy((uint8_t *)VRAM_TEXT, scr, 1000);
+    memcpy((uint8_t *)VRAM_ATTR, scr + 1000, 1000);
     if (bar_shown & 1)
         hist_half(bar_shown >> 1, 0);    /* the screen copy has an empty bar */
     shown_minute = 0xFFFFFFFFUL;

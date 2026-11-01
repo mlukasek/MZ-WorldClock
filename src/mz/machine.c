@@ -34,7 +34,7 @@ static uint8_t gdg_present(void)
     uint8_t vblk, last = 0, edges = 0;
 
     for (i = 0; i < 2000; ++i) {
-        vblk = PPI_PC & 0x80;
+        vblk = io_rd(R_PC) & 0x80;
         if (!vblk == !(hw_in(0xCE) & 0x40))
             ++same;
         if (i && vblk != last)
@@ -61,7 +61,7 @@ void machine_init(void)
             mach.model = MODEL_MZ1500;
     }
     mach.jp = rom_has(0x06F3, "1Z-009");
-    PPI_CTRL = 0x04;                 /* PC2 = 0: no INT from the 8253, we run with DI */
+    IO_WR(R_PPI, 0x04);                 /* PC2 = 0: no INT from the 8253, we run with DI */
     mach.lines = tb_measure_lines();
     mach.ntsc = mach.lines < 287;
     mach.line_hz = mach.ntsc ? 15700 : 15611;
@@ -73,7 +73,7 @@ void machine_exit(uint32_t local_secs)
         cgram_restore();             /* the CG-RAM as the IPL left it: a copy of the CG-ROM */
     else if (mach.model == MODEL_MZ1500)
         pcg_exit();                  /* MZ-700 mode; mon_cls() below rewrites the PCG cell bytes */
-    PPI_CTRL = 0x05;                 /* PC2 = 1: the monitor's clock interrupt */
+    IO_WR(R_PPI, 0x05);                 /* PC2 = 1: the monitor's clock interrupt */
     mon_set_clock(local_secs);       /* reprograms CTC1/CTC2 and ends with EI */
     mon_cls();
 }

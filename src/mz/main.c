@@ -2,7 +2,8 @@
  *
  * Start: detect the machine, start the time base, get the time (the test hook, the Unicard RTC or the
  * dialog), then the historic screen, one pass per frame. T sets the time again, M swaps the continents
- * (Americas on the left), BREAK returns to the monitor with its clock set. */
+ * (Americas on the left), G switches the MZ-800 between the historic and the modern look, BREAK returns to
+ * the monitor with its clock set. */
 #include "machine.h"
 #include "timebase.h"
 #include "kbd.h"
@@ -14,8 +15,29 @@
 #include "rtc_unicard.h"
 #include "cgram.h"
 #include "pcg1500.h"
+#include "modview.h"
 
 static uint8_t home;
+static uint8_t modern;               /* the MZ-800's modern look is on */
+
+/* Back to the text screen of MZ-700 mode (from the modern look: its CG-RAM is rebuilt) */
+static void look_text(void)
+{
+    if (modern) {
+        mod_leave();
+        cgram_restore();
+        cgram_load();
+    }
+}
+
+/* Draw the current look and view from scratch */
+static void look_draw(wc_time_t utc)
+{
+    if (modern)
+        mod_enter(home, hist_view, utc);
+    else
+        hist_draw();
+}
 
 int main(void)
 {
@@ -51,19 +73,28 @@ int main(void)
     for (;;) {
         tb_wait_frame();
         now = clock_now(&frac);
-        hist_update(now, frac < tb_line_hz / 2);
+        if (modern)
+            mod_update(now);
+        else
+            hist_update(now, frac < tb_line_hz / 2);
         rtc_poll(now, home);
         key = kbd_get();
         if (key == K_BREAK)
             break;
         if (key == 'T') {
+            look_text();
             setup_run(&home, 1);
-            hist_draw();
+            look_draw(clock_now(&frac));
         } else if (key == 'M') {
             hist_view ^= 1;
-            hist_draw();
+            look_draw(now);
+        } else if (key == 'G' && mach.model == MODEL_MZ800) {
+            look_text();
+            modern ^= 1;
+            look_draw(now);
         }
     }
+    look_text();
     now = clock_now(&frac);
     wc_split(wc_to_local(now, wc_zones[home].std_minutes, wc_zones[home].dst), &tm);
     local_secs = (uint32_t)tm.hour * 3600 + (uint16_t)(tm.min * 60 + tm.sec);

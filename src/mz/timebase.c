@@ -16,25 +16,25 @@ static uint16_t read_ctc1(void)
 {
     uint8_t lo;
 
-    CTC_CTRL = 0x40;          /* latch counter 1 */
-    lo = CTC_1;
-    return lo | (uint16_t)CTC_1 << 8;
+    IO_WR(R_CTC, 0x40);          /* latch counter 1 */
+    lo = io_rd(R_CTC1);
+    return lo | (uint16_t)io_rd(R_CTC1) << 8;
 }
 
 static uint16_t read_ctc2(void)
 {
     uint8_t lo;
 
-    CTC_CTRL = 0x80;          /* latch counter 2 */
-    lo = CTC_2;
-    return lo | (uint16_t)CTC_2 << 8;
+    IO_WR(R_CTC, 0x80);          /* latch counter 2 */
+    lo = io_rd(R_CTC2);
+    return lo | (uint16_t)io_rd(R_CTC2) << 8;
 }
 
 void tb_wait_frame(void)
 {
-    while (!(PPI_PC & 0x80))  /* until the screen is drawn (/VBLK = 1) */
+    while (!(io_rd(R_PC) & 0x80))  /* until the screen is drawn (/VBLK = 1) */
         ;
-    while (PPI_PC & 0x80)     /* until the blanking starts */
+    while (io_rd(R_PC) & 0x80)     /* until the blanking starts */
         ;
 }
 
@@ -42,9 +42,9 @@ uint16_t tb_measure_lines(void)
 {
     uint16_t a;
 
-    CTC_CTRL = 0x74;          /* CTC1 mode 2, count 65536: a line counter */
-    CTC_1 = 0;
-    CTC_1 = 0;
+    IO_WR(R_CTC, 0x74);          /* CTC1 mode 2, count 65536: a line counter */
+    IO_WR(R_CTC1, 0);
+    IO_WR(R_CTC1, 0);
     tb_wait_frame();
     tb_wait_frame();
     a = read_ctc1();
@@ -55,12 +55,12 @@ uint16_t tb_measure_lines(void)
 void tb_init(uint16_t line_hz)
 {
     tb_line_hz = line_hz;
-    CTC_CTRL = 0x74;          /* CTC1 mode 2 */
-    CTC_CTRL = 0xB0;          /* CTC2 mode 0 */
-    CTC_2 = 0xFE;             /* count FFFEh: a value to recognise once loaded */
-    CTC_2 = 0xFF;
-    CTC_1 = 10;               /* OUT1 every 10 lines, so that CTC2 loads at once (as TIMST) */
-    CTC_1 = 0;
+    IO_WR(R_CTC, 0x74);          /* CTC1 mode 2 */
+    IO_WR(R_CTC, 0xB0);          /* CTC2 mode 0 */
+    IO_WR(R_CTC2, 0xFE);             /* count FFFEh: a value to recognise once loaded */
+    IO_WR(R_CTC2, 0xFF);
+    IO_WR(R_CTC1, 10);               /* OUT1 every 10 lines, so that CTC2 loads at once (as TIMST) */
+    IO_WR(R_CTC1, 0);
     while (read_ctc2() != 0xFFFE)
         ;
     clock_set(0);
@@ -68,9 +68,9 @@ void tb_init(uint16_t line_hz)
 
 void clock_set(wc_time_t utc)
 {
-    CTC_CTRL = 0x74;          /* restart CTC1: the next second starts a full second from now */
-    CTC_1 = (uint8_t)tb_line_hz;
-    CTC_1 = (uint8_t)(tb_line_hz >> 8);
+    IO_WR(R_CTC, 0x74);          /* restart CTC1: the next second starts a full second from now */
+    IO_WR(R_CTC1, (uint8_t)tb_line_hz);
+    IO_WR(R_CTC1, (uint8_t)(tb_line_hz >> 8));
     base_c2 = read_ctc2();
     base_utc = utc;
 }
