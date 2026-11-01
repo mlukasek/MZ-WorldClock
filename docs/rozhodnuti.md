@@ -17,7 +17,8 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   Přepínání klávesou.
 - **Unicard RTC drží místní čas.** Výchozí pásmo RTC je Praha (SEČ/SELČ, EU), v nastavení jde změnit. Bez RTC se
   program zeptá na datum, čas a pásmo.
-- **Pruh sekund:** plný za 60 s, krok 1 s (30 buněk po půlkách), bez rasterových triků.
+- **Pruh sekund:** plný za 60 s, bez rasterových triků. Původně krok 1 s po půlkách buňky, upřesněno níže
+  (předloha): MZ-700 krok 2 s.
 - **Jazyk:** co nejvíc v C (z88dk nightly). Kód a komentáře anglicky, dokumentace česky.
 - **Licence GPL-3.0**, veřejné repo `mlukasek/MZ-WorldClock`. Push jen na pokyn autora.
 
@@ -44,6 +45,20 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   Ověřeno ze ROM v emulátoru. Na reálném stroji ještě ne.
 - **Bez přerušení.** Čas se počítá v CTC1 (1 Hz z HSYNC) a CTC2 (čítač sekund) jako v monitoru, snímky
   pollingem /VBLK. Podrobnosti budou v `vyvoj.md`.
+
+## 2026-11-01: předloha (autor)
+
+- **Popisek `L.A.`** podle katalogu z 3/1983. Leták má `L.ANGELS`. Podrobnosti v [original.md](original.md).
+- **Pruh sekund:**
+  - MZ-700: znak 3Ah, krok 2 s, tj. 30 buněk za 60 s. Žádný CG-ROM nemá čtvrtinu buňky pro krok 1 s.
+  - MZ-800: jemně přes vlastní znaky v CG-RAM, krok 1 s po půlkách nebo jemněji.
+- **Titulek EU:** `WORLD CLOCK` bez mezer ve sloupcích 20–30 místo hiragany (20–31). Hvězdičky a `S H A R P`
+  zůstávají na místě. Varianta s mezerami by se mezi hvězdičky nevešla.
+
+## 2026-11-01: nástroje
+
+- **Pillow, numpy a scipy** (nainstalované přes `pip --user`) jen pro analytické skripty v `tools/ref/`.
+- **Build a testy zůstávají jen na standardní knihovně Pythonu.**
 
 ## 2026-11-01: překladač
 

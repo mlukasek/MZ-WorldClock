@@ -5,18 +5,15 @@
 - **Fáze 0 (založení) hotová:**
   - repo, dokumentace, nástroje pro emulátor;
   - smoke test toolchainu prošel na MZ-700 EU (PAL), MZ-700 JP (NTSC), MZ-700 EU (NTSC) a MZ-800, s oběma překladači.
-- **Další krok:** fáze 1, rekonstrukce předlohy podle skenu katalogu.
+- **Fáze 1 (předloha) hotová:**
+  - `data/historic.txt` zrekonstruovaný z katalogu 3/1983 ([original.md](original.md));
+  - generátor `tools/mkhistoric.py` (C tabulky a náhled PNG).
+- **Další krok:** fáze 2, bezpečný základ a historický vzhled.
 
 ## Plán vývoje
 
 0. **Založení:** git, GPL-3.0, docs, `tools/emu`, smoke test vlastního crt0 na všech strojích. **Hotovo.**
-1. **Rekonstrukce předlohy:**
-   - sken katalogu `smz72.JPG` do `input/` (jen lokálně, [zdroje.md](zdroje.md));
-   - `data/historic.txt` (mozaika 80×50, texty, atributy);
-   - náhled PNG s fontem CG-ROM a porovnání;
-   - kódy displeje hiragany v JP CG-ROM;
-   - tvar pruhu a pravítka;
-   - zapsat do `docs/original.md`.
+1. **Rekonstrukce předlohy** (`data/historic.txt`, [original.md](original.md)). **Hotovo.**
 2. **Bezpečný základ a historický vzhled:**
    - start, konec a detekce na všech strojích, včetně nativního startu MZ-800 a obnovy CG-RAM;
    - timebase, klávesnice;
@@ -37,7 +34,7 @@
 | Co | Kde |
 |---|---|
 | z88dk nightly | `E:\SHARP_GIT\Tools\z88dk-nightly` (proměnná `Z88DK`). Verze 2.4 v `E:\SAPI_GIT\Tools-nepouzivat` chybně překládá ternární operátor. |
-| Python 3 | jen standardní knihovna |
+| Python 3 | build a testy jen se standardní knihovnou. Analytické skripty v `tools/ref/` navíc používají Pillow, numpy a scipy (`python -m pip install --user pillow numpy scipy`). |
 | Emulátor | `..\mz800emu-2.0.5-preview` (proměnná `MZ800EMU_DIR`). Zdrojáky `..\mz800emu` jen ke čtení. |
 
 Emulované stroje (`tools/emu/mzemu.py`, `Emu(exe, rom=..., unicard=...)`):
@@ -51,6 +48,17 @@ Emulované stroje (`tools/emu/mzemu.py`, `Emu(exe, rom=..., unicard=...)`):
 
 `mzemu.py` píše vlastní ini do `build/emu/<exe>.ini` a emulátor spouští s `--no-save-ini`. Ve složce emulátoru se
 nic nemění.
+
+## Data a generátory
+
+- **`data/historic.txt`** popisuje historickou obrazovku: mapu 80×50 bloků, texty, titulky EU a JP, pruh a hodiny
+  s pásmy.
+  - `python tools/mkhistoric.py data/historic.txt build/gen` vytvoří `historic.c` a `.h`.
+  - `python tools/mkhistoric.py data/historic.txt --png work/historic` vytvoří náhledy s fontem CG-ROM.
+- **`tools/cgrom.py`** načítá CG-ROM ze zdrojů emulátoru, jen lokálně, do repa se nedávají. Vykresluje tabulky znaků
+  a obrazovky do PNG.
+- **Rekonstrukce předlohy** (`tools/ref/`): `align_catalog.py` zarovná fotku katalogu, `extract_map.py` z ní přečte
+  mapu. Postup je v [original.md](original.md).
 
 ## Překlad a testy
 

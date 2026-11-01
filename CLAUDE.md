@@ -22,6 +22,7 @@ Autor: Martin Lukášek. Komunikace **česky**.
 - `docs/rozhodnuti.md`: rozhodnutí autora a technická rozhodnutí. Nová dopisovat.
 - `docs/hw-otazky.md`: otázky k ověření na reálném HW.
 - `docs/zdroje.md`: pátrání po originálu, dobové fotky, remaky, odkazy.
+- `docs/original.md`: rekonstrukce obrazovky z fotek, rozvržení, jistota. Data jsou v `data/historic.txt`.
 - `docs/remake-2019.md`: rozbor japonského remaku v `input/World-Clock/`. Je jen ke studiu, kód nepřebírat.
 - **Kód:**
   - `src/core/`: přenositelné C bez HW;
@@ -43,7 +44,8 @@ Autor: Martin Lukášek. Komunikace **česky**.
   - konzoli z88dk (printf, conio) nepoužívat, volá monitor;
   - asm moduly přes z88dk-z80asm, konvence fastcall;
   - pasmo pro tento projekt není potřeba.
-- **Python 3, jen standardní knihovna.**
+- **Python 3:** build a testy jen se standardní knihovnou. Analytické skripty v `tools/ref/` smí používat Pillow,
+  numpy a scipy.
 - **Měřit, nehádat:**
   - chování ověřovat v emulátoru (`tools/emu/mzemu.py`);
   - jádro v C přes `z88dk-ticks` proti referenci v Pythonu.
