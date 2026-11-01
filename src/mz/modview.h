@@ -9,5 +9,6 @@
 void mod_enter(uint8_t home, uint8_t view, wc_time_t utc);   /* into MZ-800 mode and draw everything */
 void mod_leave(void);                                         /* back to MZ-700 mode */
 void mod_update(wc_time_t utc);                               /* once per frame */
+void mod_prepare(uint8_t home);                               /* precompute for the home zone (optional) */
 
 #endif

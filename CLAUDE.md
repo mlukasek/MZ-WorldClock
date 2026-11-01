@@ -26,7 +26,7 @@ Autor: Martin Lukášek. Komunikace **česky**.
 - `docs/remake-2019.md`: rozbor japonského remaku v `input/World-Clock/`. Je jen ke studiu, kód nepřebírat.
 - **Kód:**
   - `src/core/`: přenositelné C bez HW;
-  - `src/mz/`: HAL Sharp, vlastní `crt0.asm` (ORG 2000h, DI, SP 8000h, BSS A000h);
+  - `src/mz/`: HAL Sharp, vlastní `crt0.asm` (ORG 2000h, DI, SP C000h, BSS A000h);
   - `tools/`: generátory v Pythonu, `mkmzf.py`, `emu/mzemu.py` (ovládání emulátoru přes MCP rouru);
   - `tests/`.
 - `input/`: cizí materiály bez licence, jen lokálně (v `.gitignore`).

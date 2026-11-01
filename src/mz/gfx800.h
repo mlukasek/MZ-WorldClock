@@ -27,5 +27,7 @@ void gfx_plot(uint16_t x, uint8_t y);  /* colour 3 (mapped, any write format; se
 /* hw.asm: one map row of the modern look, both planes (row_land, row_day in screen order, row_dither) */
 extern uint8_t row_land[40], row_day[40], row_dither;
 void row_out(volatile uint8_t *vram_row) __z88dk_fastcall;
+/* hw.asm: one RLE row of the land mask (tools/mkmodern.py) into row_land, not rotated */
+void land_decode(const uint8_t *rle) __z88dk_fastcall;
 
 #endif

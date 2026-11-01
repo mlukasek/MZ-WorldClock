@@ -27,16 +27,21 @@ static uint16_t yday;
 static int16_t tand;
 static uint16_t x16;
 static uint16_t d_start[MOD_MAP_H], d_len[MOD_MAP_H];
+/* The caches below are keyed in BSS (zeroed by crt0, also when the program is run again without loading):
+   0 = empty. */
+static uint8_t half[MOD_MAP_H];         /* half-width of the day per row, for the day half_yday - 1 */
+static uint16_t half_yday;
 static uint8_t dirty[MOD_MAP_H / 8];
 static uint16_t dirty_clocks;
 static uint32_t shown_minute;
 static uint8_t shown_sec, shown_mday;
-static uint8_t land[40], dayb[40], pl1[40], pl2[40];
-static uint8_t zrow[3][MOD_ZONE_W];
+static uint8_t pl1[40], pl2[40];
+static uint8_t zmask[3][MOD_ZONE_W / 8];
 static char buf[16];
 /* the border cells of the home zone (cell column), cell row by cell row; computed once per home zone */
 static uint8_t border_cx[MOD_BORDER_MAX];
 static uint16_t border_start[MOD_ZONE_H + 1];
+static uint8_t border_home;            /* the home they belong to, + 1 */
 
 /* floor(v / 2^n), as Python's >> */
 static int32_t fshr(int32_t v, uint8_t n)
@@ -66,83 +71,91 @@ static void set_bits(uint8_t *b, uint16_t x, uint16_t n)
         *p |= (uint8_t)((1 << n) - 1);
 }
 
+/* Bits [x, x + n) of a 320-pixel row, wrapping at the right edge */
+static void set_cyc(uint8_t *b, uint16_t x, uint16_t n)
+{
+    if (x + n <= W) {
+        set_bits(b, x, n);
+    } else {
+        set_bits(b, x, W - x);
+        set_bits(b, 0, x + n - W);
+    }
+}
+
+/* The land of map row y into row_land, in screen order (the view rotated by `shift` bytes) */
 static void land_row(uint8_t y)
 {
-    const uint8_t *p = mod_land_rle + mod_land_idx[y];
-    uint16_t x = 0;
-    uint8_t colour = 0, n;
-
-    memset(land, 0, 40);
-    while (x < W) {
-        n = *p++;
-        if (colour)
-            set_bits(land, x, n);
-        x += n;
-        if (n != 255)
-            colour ^= 1;
+    land_decode(mod_land_rle + mod_land_idx[y]);
+    if (shift) {                               /* rotate right by `shift` bytes; pl1 is free here */
+        memcpy(pl1, row_land, 40);
+        memcpy(row_land + shift, pl1, 40 - shift);
+        memcpy(row_land, pl1 + 40 - shift, shift);
     }
 }
 
+/* The day of map row y into row_day, in screen order */
 static void day_row(uint8_t y)
 {
-    uint16_t s = d_start[y], n = d_len[y];
+    uint16_t s = d_start[y] + shift * 8, n = d_len[y];
 
-    memset(dayb, 0, 40);
     if (n >= W) {
-        memset(dayb, 0xFF, 40);
-    } else if (s + n <= W) {
-        set_bits(dayb, s, n);
-    } else {
-        set_bits(dayb, s, W - s);
-        set_bits(dayb, 0, s + n - W);
+        memset(row_day, 0xFF, 40);
+        return;
     }
+    memset(row_day, 0, 40);
+    if (s >= W)
+        s -= W;
+    set_cyc(row_day, s, n);
 }
 
-static void zone_row(uint8_t cy, uint8_t *out)
+/* Bit mask (160 bits) of the cells of zone z in zone row cy */
+static void zone_mask(uint8_t cy, uint8_t z, uint8_t *out)
 {
     const uint8_t *p = mod_zone_rle + mod_zone_idx[cy];
-    uint8_t x = 0, id, n;
+    uint8_t x;
 
-    while (x < MOD_ZONE_W) {
-        id = *p++;
-        n = *p++;
-        memset(out + x, id, n);
-        x += n;
-    }
+    memset(out, 0, MOD_ZONE_W / 8);
+    for (x = 0; x < MOD_ZONE_W; x += p[1], p += 2)
+        if (p[0] == z)
+            set_bits(out, x, p[1]);
 }
+
+#define ZBIT(m, x) ((m)[(x) >> 3] & (1 << ((x) & 7)))
 
 /* The border cells of the home zone: cells of the zone with a 4-neighbour outside it or outside the map */
 static void border_build(void)
 {
-    uint8_t *prev = zrow[0], *cur = zrow[1], *next = zrow[2], *t;
+    uint8_t *prev = zmask[0], *cur = zmask[1], *next = zmask[2], *t;
     uint8_t cy, cx, x, len, z = mod_home_zone[home];
     const uint8_t *p;
     uint16_t n = 0;
 
-    zone_row(0, cur);
-    zone_row(1, next);
+    if (border_home == home + 1)
+        return;
+    border_home = home + 1;
+    zone_mask(0, z, cur);
+    zone_mask(1, z, next);
     for (cy = 0; cy < MOD_ZONE_H; ++cy) {
         border_start[cy] = n;
         /* only the runs of the zone in this row: their ends border on another zone (runs are maximal) */
         p = mod_zone_rle + mod_zone_idx[cy];
-        for (x = 0; x < MOD_ZONE_W; x += len) {
+        for (x = 0; x < MOD_ZONE_W; x += len, p += 2) {
             len = p[1];
-            if (p[0] == z) {
-                for (cx = x; cx < x + len; ++cx) {
-                    if (cx != x && cx != x + len - 1 && cy && cy + 1 < MOD_ZONE_H && prev[cx] == z && next[cx] == z)
-                        continue;
-                    if (n < MOD_BORDER_MAX)
-                        border_cx[n++] = cx;
-                }
+            if (p[0] != z)
+                continue;
+            for (cx = x; cx < x + len; ++cx) {
+                if (cx != x && cx != x + len - 1 && cy && cy + 1 < MOD_ZONE_H && ZBIT(prev, cx) && ZBIT(next, cx))
+                    continue;
+                if (n < MOD_BORDER_MAX)
+                    border_cx[n++] = cx;
             }
-            p += 2;
         }
         t = prev;
         prev = cur;
         cur = next;
         next = t;
         if (cy + 2 < MOD_ZONE_H)
-            zone_row(cy + 2, next);
+            zone_mask(cy + 2, z, next);
     }
     border_start[MOD_ZONE_H] = n;
 }
@@ -167,19 +180,27 @@ static void sun(wc_time_t utc)
     if (r < 0)
         r += W * 16;
     x16 = (uint16_t)r;
+    /* the half-width of the day depends only on the declination: once a day for all rows. 0 = night all
+       day, W / 2 = day all day (no other row gets these values: acos(255/256) is 4 pixels) */
+    if (half_yday != yday + 1) {
+        half_yday = yday + 1;
+        for (i = 0; i < MOD_MAP_H; ++i) {
+            t = -fshr((int32_t)mod_tanlat[i] * tand, 15);
+            half[i] = t >= 256 ? 0 : t <= -256 ? W / 2 : t >= 0 ? mod_acos[t] : W / 2 - mod_acos[-t];
+        }
+    }
 }
 
 /* The day interval of map row y; 1 when it changed */
 static uint8_t interval(uint8_t y)
 {
-    int16_t p = -(int16_t)fshr((int32_t)mod_tanlat[y] * tand, 15);
-    int16_t h, s;
+    uint8_t h = half[y];
+    int16_t s;
     uint16_t start = 0, len = 0;
 
-    if (p <= -256) {
+    if (h >= W / 2) {
         len = W;
-    } else if (p < 256) {
-        h = p >= 0 ? mod_acos[p] : W / 2 - mod_acos[-p];
+    } else if (h) {
         s = (int16_t)(x16 >> 4) - h;
         if (s < 0)
             s += W;
@@ -222,12 +243,33 @@ static void marker(uint16_t x, uint8_t y, uint8_t big, uint8_t y0, uint8_t y1, u
     }
 }
 
+/* The home zone border in map rows [y0, y1), pixels [xlo, xhi): a dot on the top-left pixel of each border
+   cell. A function of its own and compared in pixels: inside render() zsdcc -SO3 --opt-code-size generated
+   wrong code for it (docs/vyvoj.md). */
+static void border_dots(uint8_t y0, uint8_t y1, uint16_t xlo, uint16_t xhi)
+{
+    uint8_t y = y0 + (y0 & 1);
+    uint16_t k, end, x;
+
+    for (; y < y1; y += 2) {
+        k = border_start[y >> 1];
+        end = border_start[(y >> 1) + 1];
+        for (; k < end; ++k) {
+            x = (uint16_t)border_cx[k] * 2 + shift * 8;
+            if (x >= W)
+                x -= W;
+            if (x >= xlo && x < xhi)
+                gfx_plot(x, MOD_MAP_Y + y);
+        }
+    }
+}
+
 /* Redraw map rows [y0, y1) (map coordinates), screen byte columns [c0, c1); VRAM mapped */
 static void render(uint8_t y0, uint8_t y1, uint8_t c0, uint8_t c1)
 {
     uint8_t y, c, bx, dither, i, v;
     volatile uint8_t *row;
-    uint16_t x, k;
+    uint16_t x;
     uint8_t sy0 = MOD_MAP_Y + y0, sy1 = MOD_MAP_Y + y1;
     const struct mod_city *ct;
 
@@ -236,23 +278,14 @@ static void render(uint8_t y0, uint8_t y1, uint8_t c0, uint8_t c1)
         land_row(y);
         day_row(y);
         dither = ((MOD_MAP_Y + y) & 1) ? 0x55 : 0xAA;
-        if (c0 == 0 && c1 == 40) {          /* a whole row: rotated into screen order, then hw.asm */
-            memcpy(row_land + shift, land, 40 - shift);
-            memcpy(row_day + shift, dayb, 40 - shift);
-            if (shift) {
-                memcpy(row_land, land + 40 - shift, shift);
-                memcpy(row_day, dayb + 40 - shift, shift);
-            }
+        if (c0 == 0 && c1 == 40) {          /* a whole row: hw.asm */
             row_dither = dither;
             row_out(row);
             continue;
         }
-        bx = c0 >= shift ? c0 - shift : c0 + 40 - shift;      /* map byte of screen column c0 */
         for (c = c0; c < c1; ++c) {
-            pl1[c] = ~land[bx] & dayb[bx];
-            pl2[c] = land[bx] & (dayb[bx] | dither);
-            if (++bx == 40)
-                bx = 0;
+            pl1[c] = ~row_land[c] & row_day[c];
+            pl2[c] = row_land[c] & (row_day[c] | dither);
         }
         gfx_wf(WF_PLANE_I);
         for (c = c0; c < c1; ++c)
@@ -261,17 +294,7 @@ static void render(uint8_t y0, uint8_t y1, uint8_t c0, uint8_t c1)
         for (c = c0; c < c1; ++c)
             row[c] = pl2[c];
     }
-    /* the home zone border: a dot on the top-left pixel of each border cell */
-    for (y = y0 + (y0 & 1); y < y1; y += 2) {
-        for (k = border_start[y >> 1]; k < border_start[(y >> 1) + 1]; ++k) {
-            x = (uint16_t)border_cx[k] * 2 + shift * 8;
-            if (x >= W)
-                x -= W;
-            v = x >> 3;
-            if (v >= c0 && v < c1)
-                gfx_plot(x, MOD_MAP_Y + y);
-        }
-    }
+    border_dots(y0, y1, (uint16_t)c0 << 3, (uint16_t)c1 << 3);
     /* markers */
     for (i = 0; i < MOD_CITIES; ++i) {
         x = mod_cities[i].x + shift * 8;
@@ -407,6 +430,14 @@ static void ruler(void)
         for (c = 0; c < 40; ++c)
             v[c] = pl2[c];
     }
+}
+
+/* The border of the home zone is the slowest part of mod_enter (about 0.3 s): main.c does it beforehand,
+   while the historic look is shown */
+void mod_prepare(uint8_t h)
+{
+    home = h;
+    border_build();
 }
 
 void mod_enter(uint8_t h, uint8_t view, wc_time_t utc)

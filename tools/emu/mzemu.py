@@ -86,7 +86,11 @@ class Emu:
         arch = os.path.splitext(exe)[0].replace('-ntsc', '').replace('-pal', '')
         ov = {'RAMDISK': {'mr1r18_pluged': '0', 'mr1r18_type': 'ROM', 'mr1r18_filepath': 'none.dat',
                           'pezik_e8_pluged': '0', 'pezik_68_pluged': '0'},
-              'UNICARD': {'connected': '1' if unicard else '0'}}
+              'UNICARD': {'connected': '1' if unicard else '0'},
+              # breakpoints only for this run: the emulator would otherwise load <arch>-breakpoints.bpt from
+              # its folder and save ours there on exit (they then stop every later run)
+              'BREAKPOINTS': {'auto_load': '0', 'auto_save': '0',
+                              'bpt_file': os.path.join(ROOT, 'build', 'emu', arch + '-breakpoints.bpt')}}
         if rom:
             ov['ROM'] = {'rom_type': ROM_TYPES[rom]}
         if hwlog:

@@ -70,6 +70,8 @@ int main(void)
     }
 
     hist_draw();
+    if (mach.model == MODEL_MZ800)
+        mod_prepare(home);           /* the modern look (G) comes up faster */
     for (;;) {
         tb_wait_frame();
         now = clock_now(&frac);

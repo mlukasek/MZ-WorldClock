@@ -27,8 +27,14 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Load a exec 2000h, kód a data v 2000h–7FFFh.**
   - Na MZ-800 mapuje `IN (E0h)` spolu s VRAM i CG-ROM na 1000h–1FFFh.
   - V režimu MZ-700 mapuje CG-RAM na C000h–CFFFh.
-- **Zásobník pod 8000h.** Monitor má zásobník na 10F0h, tj. v okně CG-ROM.
+- **Program musí skončit pod 8000h.** V režimu 320×200 MZ-800 mapuje `IN (E0h)` VRAM na 8000h–9FFFh.
+- **Zásobník pod C000h, nad BSS** (do 2026-11-01 pod 8000h, místo se uvolnilo pro program). Monitor má zásobník
+  na 10F0h, tj. v okně CG-ROM.
 - **BSS na A000h**, nuluje se při startu a není v MZF. A000h–BFFFh je RAM v každém používaném režimu.
+- **Místa je málo:** po fázi 4 program končí na 7DE4h, zbývá 540 B. Pro fázi 5 bude potřeba místo získat, např.:
+  - load na 1200h jako běžné programy MZ-700 (1200h–1FFFh je na MZ-800 pod oknem CG-ROM, smí tam jen kód a data,
+    která se nepoužívají s namapovanou VRAM);
+  - zmenšit data pásem (3,5 KB RLE, slouží jen pro okraj domovského pásma).
 - **Vlastní crt0** (`src/mz/crt0.asm`, odvozený od z88dk `mz_crt0`):
   - první instrukce je DI;
   - žádná konzole z88dk, protože volá monitor;
@@ -186,3 +192,30 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Konec:** `OUT (F0h),00h`, bajty buněk vrátí CLS monitoru.
 - **Program porty F0h a E5h na jiných strojích nepoužívá.** Na MZ-800 je F0h paleta, na MZ-700 je E5h „zakázaný“
   režim paměti.
+
+## 2026-11-01: moderní vzhled MZ-800 (autor schválil prototyp, varianta A)
+
+- **Klávesa G** přepíná historický a moderní vzhled (jen MZ-800). M prohazuje kontinenty v obou vzhledech.
+- **Barvy (paleta A):** 0 noční moře černé, 1 denní moře modré (#4040AC), 2 pevnina zelená, v noci s černým
+  rastrem, 3 texty, značky a okraj pásma světle žluté. Rozšíření VRAM se nepoužívá.
+  - Rovina I = moře ve dne, rovina II = pevnina ve dne nebo rastr v noci.
+- **Rozvržení 320×200:**
+  - řádek 0: `*** WORLD CLOCK ***` a datum `DAY DD.MM.YYYY`;
+  - řádky 10–169: mapa 320×160 (80° s. š. až 64° j. š., levý okraj dobového pohledu 25° z. d.);
+  - řádek 174: domovské město, jeho čas s vteřinami a posun `UTC+h`;
+  - dole pruh sekund (4 body za sekundu) a pravítko.
+- **Mapa a pásma z Natural Earth** (public domain), uložené jako text v `data/world_land.txt` a `world_zones.txt`.
+  Build čte jen je, shapefily v `input/` jsou potřeba jen pro přegenerování.
+- **Den a noc:** poloha subsolárního bodu na začátku minuty (časová rovnice, deklinace z tabulek po 4 dnech),
+  pro každý řádek mapy interval dne. Šířka dne se počítá jednou za den.
+  - Po změně minuty se překreslí jen řádky, kterým se interval posunul, 4 za snímek. Hodiny měst jedno město za
+    snímek. Sekundy běží dál.
+- **Domovské pásmo** má tečkovaný okraj: tečka v levém horním bodě každé okrajové buňky 2×2 body. Okraj se počítá
+  jednou pro domovské pásmo, poprvé hned po startu.
+- **Města:** 9 jako na historické obrazovce (TOKYO, PEKIN, MOSCOW, PARIS, WASHINGTON, L.ANGELES, RIO, S.AFRICA,
+  SYDNEY). Značka je křížek, domovské město má větší. Popisky (jméno a HH:MM) jsou zarovnané na bajty, s černým
+  stínem; jejich místa pro oba pohledy hledá `tools/mkmodern.py`.
+- **Atlantický pohled (M)** je stejná mapa pootočená o 128 bodů (16 bajtů).
+- **Ověření:** `tools/modref.py` počítá stejnou celočíselnou aritmetikou, test porovnává VRAM bajt po bajtu.
+- **Rychlost:** překreslení po G trvá asi 1,5 s, po M asi 1,4 s. Řádek mapy se skládá v asm (`land_decode`,
+  `row_out`); většinu zbytku tvoří zápisy do VRAM a texty.

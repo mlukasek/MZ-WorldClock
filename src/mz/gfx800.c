@@ -2,7 +2,7 @@
  *
  * DMD (CEh) 00h: 320x200 in 4 colours from planes I and II, colour = plane II bit << 1 | plane I bit, through
  * the palette (F0h). IN (E0h) maps the VRAM at 8000h-9FFFh and the CG-ROM at 1000h-1FFFh; nothing of the
- * program is there (code and data 2000h-7FFFh, stack below 8000h, BSS at A000h). In this mode the 8255 and
+ * program is there (code and data 2000h-7FFFh, BSS at A000h, stack below C000h). In this mode the 8255 and
  * the 8253 are ports D0h-D7h (io_native). Drawing overwrites plane I, where MZ-700 mode keeps its CG-RAM and
  * text VRAM: the caller restores them after gfx_off(). */
 #include <string.h>

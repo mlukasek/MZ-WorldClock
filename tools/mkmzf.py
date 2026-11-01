@@ -2,7 +2,7 @@
 
     python tools/mkmzf.py IN.bin OUT.mzf --name NAME [--load 2000] [--exec 2000]
 
-Taken over from MZ-700-Bad-Apple; here the program must end below 8000h (MZ-800 VRAM window, stack).
+Taken over from MZ-700-Bad-Apple; here the program must end below 8000h (the MZ-800 VRAM window).
 
 Header: 0 type (01h = machine code), 1-17 name (Sharp ASCII, 0Dh terminated), 12h size, 14h load address,
 16h exec address, the rest zeros.
@@ -33,8 +33,8 @@ def main():
     load = int(a.load, 16)
     exec_addr = int(a.exec_addr, 16) if a.exec_addr else load
     body = open(a.inp, 'rb').read()
-    if load + len(body) > 0x7F00:
-        raise SystemExit('program 0x%04X-0x%04X runs into the stack / MZ-800 VRAM window (8000h)'
+    if load + len(body) > 0x8000:
+        raise SystemExit('program 0x%04X-0x%04X runs into the MZ-800 VRAM window (8000h)'
                          % (load, load + len(body) - 1))
     with open(a.out, 'wb') as f:
         f.write(mzf(body, a.name, load, exec_addr))

@@ -5,7 +5,9 @@
 ;   - ORG 2000h: on the MZ-800, IN (E0h) maps the CG-ROM over 1000h-1FFFh together with the VRAM,
 ;     so neither code nor stack may live there;
 ;   - DI first: the monitor starts the program with interrupts enabled, we never use them;
-;   - our own stack below 8000h (the monitor's one is at 10F0h, inside the CG-ROM window);
+;   - our own stack below C000h, above the BSS at A000h (the monitor's stack is at 10F0h, inside the CG-ROM
+;     window; A000h-BFFFh is RAM in MZ-700 mode and in the MZ-800's 320x200 mode, whose VRAM window is
+;     8000h-9FFFh);
 ;   - no console, no atexit stack; the exit restores the monitor's SP and jumps to its command loop
 ;     (00ADh in 1Z-013A, 1Z-013B and 1Z-009B). Restoring the machine (MZ-700 mode, CG-RAM, clock,
 ;     interrupts) is done by the program before main() returns.
@@ -29,7 +31,7 @@ ENDIF
 
     defc    TAR__no_ansifont = 1
     defc    TAR__clib_exit_stack_size = 0
-    defc    TAR__register_sp = $8000
+    defc    TAR__register_sp = $C000           ; above the BSS (A000h): RAM in every mode used
     defc    TAR__crt_enable_eidi = 0
     defc    __CPU_CLOCK = 3546875
     INCLUDE "crt/classic/crt_rules.inc"
