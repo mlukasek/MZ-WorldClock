@@ -115,6 +115,8 @@ nic nemění.
   stejná aritmetika, zápisy GDG PSET a REPLACE do 2 nebo 4 rovin. `python tools/clockref.py --utc ...` vykreslí
   obě obrazovky v 16 i 4 barvách do `work/clock-*.png`. Geometrie hodin a tabulky jsou v `tools/mkmodern.py`.
 - **Prototypy ke schválení** (`tools/ref/`): `proto_modern.py` (mapa), `proto_clocks.py` (hodiny).
+- **Snímky pro README:** `python tools/screenshots.py` pustí program v emulátoru a uloží `docs/img/*.png`
+  (640×400, čtvercové body): textové obrazovky z VRAM přes CG-ROM, grafiku MZ-800 z rovin VRAM a palety.
 
 ## Překlad a testy
 

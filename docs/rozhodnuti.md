@@ -306,3 +306,12 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   klávesy). Bez vzhledů MZ-800 je bez `←→:VIEW`.
   - Po 500 průchodech hlavní smyčkou zmizí (10 s při 50 Hz, 8 s při 60 Hz), dál zůstává dobový vzhled.
   - Zmizí i při každém překreslení (mezerník, nastavení, jiný vzhled).
+
+## 2026-11-01: README a release (autor)
+
+- **README stručné** se snímky obrazovky („dlouhé bláboly nikdo nečte“).
+- **Snímky obrazovky smí do repa** (`docs/img/`), i když obsahují písmo z CG-ROM. Autor: program běží na Sharp MZ
+  s jeho vlastním písmem, snímky z počítače jsou v pořádku. Samotná CG-ROM, ROM a odvozená data (tabulky písma)
+  do repa dál nepatří.
+- **Release:** `worldclock.mzf` jako příloha GitHub release. MZF nic od Sharp neobsahuje: vlastní znaky jsou
+  vlastní kresba, mapa a pásma z Natural Earth (public domain).

@@ -36,7 +36,9 @@ Autor: Martin Lukášek. Komunikace **česky**.
 ## Pravidla
 
 - **Jazyk:** kód, komentáře a skripty **anglicky**, dokumentace **česky**.
-- **Necommitovat** obsah `input/`, ROM, CG-ROM ani nic z nich odvozeného (fonty Sharp). Licence projektu je GPL-3.0.
+- **Necommitovat** obsah `input/`, ROM, CG-ROM ani nic z nich odvozeného (fonty Sharp). Výjimka: snímky obrazovky
+  programu (`docs/img/`, `tools/screenshots.py`); autor 2026-11-01: běží to na Sharp MZ s jeho vlastním písmem.
+  Licence projektu je GPL-3.0.
 - **Git:** lokální commity průběžně, **push jen na výslovný pokyn**. Veřejné repo:
   https://github.com/mlukasek/MZ-WorldClock (`origin`, větev `main`).
 - **Toolchain:**
