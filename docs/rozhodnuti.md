@@ -48,7 +48,8 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 
 ## 2026-11-01: předloha (autor)
 
-- **Popisek `L.A.`** podle katalogu z 3/1983. Leták má `L.ANGELS`. Podrobnosti v [original.md](original.md).
+- **Popisek `L.ANGELS`** podle letáku (inzerátu). Katalog z 3/1983 má `L.A.`. Nejdřív bylo zvoleno `L.A.`, autor to
+  změnil na původní z inzerátu. Podrobnosti v [original.md](original.md).
 - **Pruh sekund:**
   - MZ-700: znak 3Ah, krok 2 s, tj. 30 buněk za 60 s. Žádný CG-ROM nemá čtvrtinu buňky pro krok 1 s.
   - MZ-800: jemně přes vlastní znaky v CG-RAM, krok 1 s po půlkách nebo jemněji.

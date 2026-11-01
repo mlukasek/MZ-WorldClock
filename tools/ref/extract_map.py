@@ -18,8 +18,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 
 LIT, DARK = 0.6, 0.15
-# text cells of the catalogue screen (row, first column, length): names in red, times in yellow
-TEXT = [(4, 9, 6), (5, 9, 5), (7, 5, 5), (8, 5, 5), (9, 13, 5), (10, 13, 5), (7, 22, 4), (8, 24, 5),
+# text cells of the screen (row, first column, length): names in red, times in yellow. L.ANGELS as in the
+# leaflet (the catalogue has the shorter L.A., with the map visible after it).
+TEXT = [(4, 9, 6), (5, 9, 5), (7, 5, 5), (8, 5, 5), (9, 13, 5), (10, 13, 5), (7, 22, 8), (8, 24, 5),
         (11, 19, 5), (12, 19, 5), (10, 29, 10), (11, 33, 5), (15, 34, 3), (16, 33, 5), (18, 2, 8),
         (19, 4, 5), (19, 17, 6), (20, 17, 5)]
 

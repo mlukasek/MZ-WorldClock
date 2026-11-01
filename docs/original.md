@@ -33,7 +33,7 @@ naplněný zhruba z poloviny.
      V 10 z nich by se prosté prahování na 0,45 lišilo od remaku. Všechny jsou na hranici rozlišení fotky.
    - **Jediný jasný rozdíl proti remaku:** blok (řádek 21, sloupec 15) je na fotce tmavý (0,07).
 3. **Popisky a časy:** v každé buňce textu se změří červená (názvy) a žlutá (časy). Všechny jsou ve stejných buňkách
-   jako v remaku, kromě L.A.
+   jako v remaku. Jediná výjimka je popisek Los Angeles (viz Rozdíly mezi fotkami).
 4. **Kontrola:** náhled vedle vyrovnané fotky (`work/ref/cmp_catalog_jp.png`).
 
 ## Rozvržení (40×25)
@@ -58,7 +58,7 @@ Města a pozice (řádek, sloupec):
 | MOSCOW (4, 9) | (5, 9) | UTC+3 |
 | PARIS (7, 5) | (8, 5) | UTC+1, letní čas EU |
 | PEKIN (9, 13) | (10, 13) | UTC+8 |
-| L.A. (7, 22) | (8, 24) | UTC−8, letní čas USA |
+| L.ANGELS (7, 22) | (8, 24) | UTC−8, letní čas USA |
 | TOKYO (11, 19) | (12, 19) | UTC+9 |
 | WASHINGTON (10, 29) | (11, 33) | UTC−5, letní čas USA |
 | REO (15, 34) | (16, 33) | UTC−3 (bez letního času od 2019) |
@@ -68,7 +68,8 @@ Města a pozice (řádek, sloupec):
 ## Rozdíly mezi fotkami
 
 - **Popisek Los Angeles:** leták (a remake) má `L.ANGELS` ve sloupcích 22–29. Katalog má `L.A.` ve sloupcích 22–25
-  a za ním je vidět mapa. **Použito `L.A.` (rozhodnutí autora).**
+  a za ním je vidět mapa. **Použito `L.ANGELS` podle letáku, tj. inzerátu, hlavního zdroje autora** (rozhodnutí
+  autora). Bloky mapy pod popiskem zůstávají v datech tmavé jako pod ostatními popisky.
 - Jinak se fotky neliší v ničem, co jde rozlišit.
 
 ## Jistota
