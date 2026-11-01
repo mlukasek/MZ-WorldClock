@@ -16,7 +16,8 @@ Reálné stroje má autor. U každé otázky je, proč na ní záleží.
    - V emulátoru vrací poslední bajt na sběrnici, tj. operand CEh.
 2. **Neudělá `OUT (E4h),A` na MZ-700 nic nečekaného?** Program ho volá hned při startu na všech strojích.
    - Podle dokumentace mapuje ROM na 0000h a VRAM s I/O na D000h–FFFFh, tedy stav po startu.
-3. **Matice japonské klávesnice (1Z-009):** sedí poloha písmen, která program používá (`M`, `G`, `T`)?
+3. **Matice japonské klávesnice (1Z-009):** sedí poloha kláves, které program používá (mezerník, šipky ← →,
+   `CR`, `BREAK`, písmena `M`, `G`, `T`)?
    - BREAK je sloupec 8, bit 7.
 
 ## MZ-800

@@ -20,10 +20,13 @@ nikdy nenašel, předlohou jsou dobové fotky ([docs/zdroje.md](docs/zdroje.md))
 
 | Klávesa | Co dělá |
 |---|---|
-| `T` | nastaví datum, čas a domovské pásmo |
-| `M` | prohodí kontinenty: Amerika vlevo, Evropa uprostřed (historický vzhled a mapa) |
-| `G` | jen MZ-800: historický vzhled → mapa → digitální hodiny → ručičkové hodiny → zpět |
+| mezerník | prohodí kontinenty: Amerika vlevo, Evropa uprostřed (historický vzhled a mapa) |
+| `←` `→` | jen MZ-800: historický vzhled ↔ mapa ↔ digitální hodiny ↔ ručičkové hodiny, dokola |
+| `CR` | nastaví datum, čas a domovské pásmo |
 | `BREAK` | konec, návrat do monitoru s nastavenými hodinami |
+
+Po startu je klávesy na pár sekund vidět pod pravítkem. Fungují i písmena z první verze: `M` (mezerník), `G`
+(`→`) a `T` (`CR`).
 
 Program se nahrává od 1200h a startuje na 2000h.
 

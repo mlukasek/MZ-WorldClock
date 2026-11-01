@@ -40,7 +40,8 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   na 10F0h, tj. v okně CG-ROM.
 - **BSS na A000h**, nuluje se při startu a není v MZF. A000h–BFFFh je RAM v každém používaném režimu.
 - **Místo:** po fázi 4 končil program na 7DE4h (zbývalo 540 B). Po přesunu studené části (3,4 KB) končí hlavní
-  část na 7074h. Další rezerva: data pásem (3,5 KB RLE, slouží jen pro okraj domovského pásma).
+  část na 7074h. Pak data pásem: běh je jeden bajt (ID pásma << 4 | délka − 1, delší běh rozdělený), místo
+  dvojice bajtů. Z 3,4 KB je 1,9 KB a pod 8000h zbývá zase přes 1 KB.
 - **Vlastní crt0** (`src/mz/crt0.asm`, odvozený od z88dk `mz_crt0`):
   - první instrukce je DI;
   - žádná konzole z88dk, protože volá monitor;
@@ -291,3 +292,15 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Oprava:** ještě v režimu MZ-700 se do čítače 0 zapíše jen řídicí slovo (36h, režim 3) bez délky. Čítač
   přestane počítat, OUT zůstane v 1, jako ho nechal monitor, a čeká na délku, která nepřijde. Žádná hrana.
   - Ověřeno v emulátoru (`get_periph_i8253`): při všech přechodech G zůstává OUT 1 a hodnota čítače se nemění.
+
+## 2026-11-01: ovládání (autor)
+
+- **Klávesy, které člověka napadnou:** mezerník prohodí kontinenty, šipky ← → listují vzhledy MZ-800 dokola
+  oběma směry, CR otevře nastavení času a pásma, BREAK končí. Autor se bál, že M, G a T nikoho nenapadnou.
+  - Písmena z první verze fungují dál jako druhá možnost (M, G jako →, T).
+  - Na hodinách mezerník nic nedělá, kontinenty tam nejsou.
+- **Nápověda:** po startu je v řádku 24 historické obrazovky (pod pravítkem, na dobových fotkách prázdný) bíle
+  `SPACE:TURN  ←→:VIEW  CR:TIME  BREAK:END`. Šipky jsou znaky C4h a C3h z CG-ROM (inverzní, vypadají jako
+  klávesy). Bez vzhledů MZ-800 je bez `←→:VIEW`.
+  - Po 500 průchodech hlavní smyčkou zmizí (10 s při 50 Hz, 8 s při 60 Hz), dál zůstává dobový vzhled.
+  - Zmizí i při každém překreslení (mezerník, nastavení, jiný vzhled).

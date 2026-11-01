@@ -2,13 +2,14 @@
 
     python tests/emu/run_modern.py [--utc 2026-11-01T15:00:05]
 
-On the emulated MZ-800: the time into the test hook, G (the map, 16 colours), compare VRAM planes I-IV with
-tools/modref.py at the program's time; M (the Atlantic view), compare; run over a minute change (the moved
-day and night and the new clocks are drawn a few rows per frame), compare; M back, compare. G (the digital
-clock, 16 colours), compare planes I-IV with tools/clockref.py, again a second later; G (the analog clock),
-compare, again over a minute change; G back to the historic look (the text screen and the own glyphs in the
-CG-RAM); BREAK (the CG-RAM restored). Then once more acting as without the VRAM extension (test hook flag):
-the map and both clocks in 4 colours, planes III and IV empty. Screenshots go to work/emu/.
+On the emulated MZ-800: the time into the test hook, the right arrow (the map, 16 colours), compare VRAM
+planes I-IV with tools/modref.py at the program's time; SPACE (the Atlantic view), compare; run over a minute
+change (the moved day and night and the new clocks are drawn a few rows per frame), compare; M back, compare.
+G (the digital clock, 16 colours), compare planes I-IV with tools/clockref.py, again a second later; G (the
+analog clock), compare, again over a minute change; the right arrow back to the historic look (the text
+screen and the own glyphs in the CG-RAM); BREAK (the CG-RAM restored). Then once more acting as without the
+VRAM extension (test hook flag): the left arrow backwards through the analog clock, the digital one and the
+map (4 colours, planes III and IV empty) to the historic look. Screenshots go to work/emu/.
 """
 import argparse
 import os
@@ -93,10 +94,10 @@ def main():
     with Emu('mz800emu.exe') as emu:
         emu.run_mzf(os.path.join(ROOT, 'build', 'worldclock.mzf'))
         emu.poke(syms['_test_hook'] + 4, bytes([1]) + struct.pack('<I', int((utc0 - EPOCH).total_seconds())))
-        emu.run(50)
-        emu.key('G', 3, 150)
+        emu.run(100)                                           # the start (zone border) done
+        emu.key('RIGHT', 3, 150)
         compare(emu, syms, d, 'pacific', 'enter', errs)
-        emu.key('M', 3, 150)
+        emu.key('SPACE', 3, 150)
         t = compare(emu, syms, d, 'atlantic', 'atlantic', errs)
         # over the next minute change, then far enough for the spread redraw
         emu.run(int((60 - t.second + 10) * 50))
@@ -111,22 +112,22 @@ def main():
         t = compare_clock(emu, syms, d, True, True, 'analog-16', errs)
         emu.run(int((60 - t.second + 3) * 50))                  # over the next minute change
         compare_clock(emu, syms, d, True, True, 'analog-16-minute', errs)
-        emu.key('G', 3, 50)
+        emu.key('RIGHT', 3, 50)
         emu.screenshot(os.path.join(ROOT, 'work', 'emu', 'modern-back-historic.png'))
         back_to_historic(emu, syms, data, errs, 'G')
     # without the VRAM extension: the map and the clocks in 4 colours
     with Emu('mz800emu.exe') as emu:
         emu.run_mzf(os.path.join(ROOT, 'build', 'worldclock.mzf'))
         emu.poke(syms['_test_hook'] + 4, bytes([3]) + struct.pack('<I', int((utc0 - EPOCH).total_seconds())))
-        emu.run(50)
-        emu.key('G', 3, 150)
-        compare(emu, syms, d, 'pacific', 'enter-4', errs, False)
-        emu.key('G', 3, 50)
-        compare_clock(emu, syms, d, False, False, 'digital-4', errs)
-        emu.key('G', 3, 50)
+        emu.run(100)
+        emu.key('LEFT', 3, 50)                                 # backwards: analog, digital, map, historic
         compare_clock(emu, syms, d, True, False, 'analog-4', errs)
-        emu.key('G', 3, 50)
-        back_to_historic(emu, syms, data, errs, 'G (4 colours)')
+        emu.key('LEFT', 3, 50)
+        compare_clock(emu, syms, d, False, False, 'digital-4', errs)
+        emu.key('LEFT', 3, 150)
+        compare(emu, syms, d, 'pacific', 'enter-4', errs, False)
+        emu.key('LEFT', 3, 50)
+        back_to_historic(emu, syms, data, errs, 'LEFT (4 colours)')
     print('mz800 modern', 'OK' if not errs else 'FAIL\n  ' + '\n  '.join(errs))
     sys.exit(1 if errs else 0)
 

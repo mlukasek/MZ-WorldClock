@@ -153,3 +153,21 @@ void hist_update(wc_time_t utc, uint8_t colon_on)
         bar_shown = halves;
     }
 }
+
+void hist_hint(uint8_t show)
+{
+    /* <> are the cursor key glyphs; <>:VIEW only on the MZ-800 (its looks) */
+    const char *s = "SPACE:TURN  <>:VIEW  CR:TIME  BREAK:END";
+    uint8_t *v = (uint8_t *)VRAM_TEXT + 24 * 40, wide = mach.model == MODEL_MZ800;
+
+    memset(v, 0, 40);
+    memset(v + 0x800, show ? 0x70 : 0, 40);
+    if (!show)
+        return;
+    v += wide ? 0 : 5;
+    for (; *s; ++s) {
+        if (*s == '<' && !wide)
+            s += 9;
+        *v++ = *s == '<' ? 0xC4 : *s == '>' ? 0xC3 : txt_code(*s);
+    }
+}

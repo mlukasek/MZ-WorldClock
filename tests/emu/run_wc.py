@@ -4,7 +4,9 @@
 
 For each machine: load the MZF, put the UTC time into the test hook (2003h, skips the dialog), run 2 s,
 then check the detected machine, the title, every city's HH:MM (against Python's zoneinfo; needs the tzdata
-package on Windows), the colons and the seconds bar; press BREAK and check that the monitor runs again.
+package on Windows), the colons, the seconds bar and the keys under it; after 600 frames the keys gone; SPACE
+(the continents swapped), M (back), CR (the time dialog), BREAK (out of it); press BREAK and check that the
+monitor runs again.
 --dialog instead types a date and time into the dialog (zone PRAGUE / TOKYO by machine) and checks the
 clocks. Screenshots go to work/emu/.
 """
@@ -42,11 +44,24 @@ def disp(text):
     return bytes(ASCII_TO_DISPLAY[c] for c in text)
 
 
-def check_screen(emu, data, utc, jp, errs, view='pacific', fine=False, pcg=False):
+def hint_row(wide):
+    """Row 24 with the keys (histview.c hist_hint): <> are the cursor key glyphs C4h, C3h; <>:VIEW only on
+    the MZ-800, the row centred; white."""
+    text = 'SPACE:TURN  <>:VIEW  CR:TIME  BREAK:END' if wide else 'SPACE:TURN  CR:TIME  BREAK:END'
+    at = (40 - len(text)) // 2
+    chars = [0] * 40
+    for k, ch in enumerate(text):
+        chars[at + k] = {'<': 0xC4, '>': 0xC3}.get(ch) or mkhistoric.to_display(ch)[0]
+    return chars, [0x70] * 40
+
+
+def check_screen(emu, data, utc, jp, errs, view='pacific', fine=False, pcg=False, hint=None):
     """The whole screen against the data: the static part of `view` (map, names, title, ruler), the clocks
-    at the view's places in the time `utc` (zoneinfo), the seconds bar."""
+    at the view's places in the time `utc` (zoneinfo), the seconds bar; row 24 empty or `hint` (hint_row)."""
     chars, attrs = emu.text_dump()
     want = mkhistoric.compose(data, 'JP' if jp else 'EU', view)   # jp: the hiragana title
+    if hint:
+        want.chars[960:1000], want.attrs[960:1000] = hint
     clocks = mkhistoric.clock_positions(data, view)
     skip = set()
     for row, col in clocks:
@@ -136,7 +151,8 @@ def run_machine(name, utc0, dialog, mzf, syms, data, native=False):
         if got[:3] != (model, jp, ntsc) or got[3] != want_lines or got[4] != (15700 if ntsc else 15611):
             errs.append('detection %s, want model %d jp %d ntsc %d lines %d' % (got, model, jp, ntsc, want_lines))
         hira, fine = jp or name in HIRAGANA, name in FINE
-        check_screen(emu, data, utc, hira, errs, fine=fine, pcg=name == 'mz1500')
+        # the keys under the ruler for 500 frames after the start
+        check_screen(emu, data, utc, hira, errs, fine=fine, pcg=name == 'mz1500', hint=hint_row(model == 1))
         if name in HIRAGANA:                           # the own glyphs in the CG-RAM
             cgram = emu.region('cgram_700', 0, 4096)
             for g in mkglyphs.parse(os.path.join(ROOT, 'data', 'glyphs.txt')):
@@ -145,11 +161,19 @@ def run_machine(name, utc0, dialog, mzf, syms, data, native=False):
                     errs.append('CG-RAM glyph %s: %s' % (g['name'], cgram[o:o + 8].hex()))
         emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s%s%s.png' % (name, '-dialog' if dialog else '',
                                                                        '-native' if native else '')))
-        if not dialog:                                  # M: the continents swapped, M again: back
-            emu.key('M', 3, 50)                  # the redraw takes ~8 frames, the clocks 9 more
+        if not dialog:                                  # the keys gone after 500 passes of the main loop
+            emu.run(600 - 2 * fps)                      # (one per frame, a few take longer)
+            check_screen(emu, data, program_time(emu, syms), hira, errs, 'pacific', fine, name == 'mz1500')
+        if not dialog:                                  # SPACE: the continents swapped, M again: back
+            emu.key('SPACE', 3, 50)              # the redraw takes ~8 frames, the clocks 9 more
             check_screen(emu, data, program_time(emu, syms), hira, errs, 'atlantic', fine, name == 'mz1500')
             emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s-atlantic.png' % name))
             emu.key('M', 3, 50)                  # the redraw takes ~8 frames, the clocks 9 more
+            check_screen(emu, data, program_time(emu, syms), hira, errs, 'pacific', fine, name == 'mz1500')
+            emu.key('CR', 3, 30)                 # CR: the time dialog; BREAK leaves it unchanged
+            if 'SET THE DATE' not in emu.text_lines()[4]:
+                errs.append('CR: no time dialog')
+            emu.key('BREAK', 3, 50)
             check_screen(emu, data, program_time(emu, syms), hira, errs, 'pacific', fine, name == 'mz1500')
         emu.key('BREAK', 5, 30)
         pc = emu.regs().get('PC', emu.regs().get('pc'))
@@ -214,7 +238,8 @@ def run_rtc(name, mzf, syms, data):
         if abs((got - want).total_seconds()) > 3:
             errs.append('clock %s, the card says %s' % (got.isoformat(), want.isoformat()))
         if 3 <= got.second <= 57:                               # not at a minute change
-            check_screen(emu, data, got, jp or name in HIRAGANA, errs, fine=name in FINE, pcg=name == 'mz1500')
+            check_screen(emu, data, got, jp or name in HIRAGANA, errs, fine=name in FINE, pcg=name == 'mz1500',
+                         hint=hint_row(model == 1))
         emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s-rtc.png' % name))
     return errs
 

@@ -1,9 +1,12 @@
 /* MZ-WorldClock for the Sharp MZ-700 (EU, JP), MZ-800 and MZ-1500: main loop.
  *
  * Start: detect the machine, start the time base, get the time (the test hook, the Unicard RTC or the
- * dialog), then the historic screen, one pass per frame. T sets the time again, M swaps the continents
- * (Americas on the left), G goes round the MZ-800's looks (historic, map, digital clock, analog clock; each
- * through a black screen), BREAK returns to the monitor with its clock set. */
+ * dialog), then the historic screen with the keys under it for a few seconds, one pass per frame. The keys
+ * (the letters of the first version still work):
+ *   SPACE (M)    swap the continents (Americas on the left), the historic look and the map
+ *   <- -> (G)    the MZ-800's looks round: historic, map, digital clock, analog clock (each through black)
+ *   CR (T)       set the date, the time and the home zone
+ *   BREAK        back to the monitor with its clock set */
 #include "machine.h"
 #include "timebase.h"
 #include "kbd.h"
@@ -51,6 +54,7 @@ static void look_draw(wc_time_t utc)
 int main(void)
 {
     wc_time_t now;
+    uint16_t hint;
     uint16_t frac;
     uint8_t key;
     uint32_t local_secs = 0;
@@ -79,6 +83,8 @@ int main(void)
     }
 
     hist_draw();
+    hist_hint(1);
+    hint = HINT_FRAMES;
     if (mach.model == MODEL_MZ800)
         mod_prepare(home);           /* the modern look (G) comes up faster */
     for (;;) {
@@ -91,20 +97,23 @@ int main(void)
         else
             hist_update(now, frac < tb_line_hz / 2);
         rtc_poll(now, home);
+        if (hint && !--hint && look == LOOK_HISTORIC)
+            hist_hint(0);
         key = kbd_get();
         if (key == K_BREAK)
             break;
-        if (key == 'T') {
+        if (key == 'T' || key == K_CR) {
             look_text();
             setup_run(&home, 1);
             look_draw(clock_now(&frac));
-        } else if (key == 'M' && look <= LOOK_MAP) {
+        } else if ((key == 'M' || key == ' ') && look <= LOOK_MAP) {
             hist_view ^= 1;
             look_draw(now);
-        } else if (key == 'G' && mach.model == MODEL_MZ800) {
-            if (look == LOOK_ANALOG)
+        } else if ((key == 'G' || key == K_RIGHT || key == K_LEFT) && mach.model == MODEL_MZ800) {
+            key = (key == K_LEFT ? look - 1 : look + 1) & 3;
+            if (key == LOOK_HISTORIC)
                 look_text();         /* the other changes go from black to black in gfx_begin */
-            look = (look + 1) & 3;
+            look = key;
             look_draw(now);
         }
     }

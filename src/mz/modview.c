@@ -119,12 +119,14 @@ static void day_row(uint8_t y)
 static void zone_mask(uint8_t cy, uint8_t z, uint8_t *out)
 {
     const uint8_t *p = mod_zone_rle + mod_zone_idx[cy];
-    uint8_t x;
+    uint8_t x, n;
 
     memset(out, 0, MOD_ZONE_W / 8);
-    for (x = 0; x < MOD_ZONE_W; x += p[1], p += 2)
-        if (p[0] == z)
-            set_bits(out, x, p[1]);
+    for (x = 0; x < MOD_ZONE_W; x += n, ++p) {
+        n = (*p & 15) + 1;
+        if ((*p >> 4) == z)
+            set_bits(out, x, n);
+    }
 }
 
 #define ZBIT(m, x) ((m)[(x) >> 3] & (1 << ((x) & 7)))
@@ -133,7 +135,7 @@ static void zone_mask(uint8_t cy, uint8_t z, uint8_t *out)
 static void border_build(void)
 {
     uint8_t *prev = zmask[0], *cur = zmask[1], *next = zmask[2], *t;
-    uint8_t cy, cx, x, len, z = mod_home_zone[home];
+    uint8_t cy, cx, x, len, id, z = mod_home_zone[home];
     const uint8_t *p;
     uint16_t n = 0;
 
@@ -144,11 +146,14 @@ static void border_build(void)
     zone_mask(1, z, next);
     for (cy = 0; cy < MOD_ZONE_H; ++cy) {
         border_start[cy] = n;
-        /* only the runs of the zone in this row: their ends border on another zone (runs are maximal) */
+        /* only the runs of the zone in this row (the bytes of a split run joined): their ends border on another
+           zone */
         p = mod_zone_rle + mod_zone_idx[cy];
-        for (x = 0; x < MOD_ZONE_W; x += len, p += 2) {
-            len = p[1];
-            if (p[0] != z)
+        for (x = 0; x < MOD_ZONE_W; x += len) {
+            id = *p >> 4;
+            for (len = 0; x + len < MOD_ZONE_W && (*p >> 4) == id; ++p)
+                len += (*p & 15) + 1;
+            if (id != z)
                 continue;
             for (cx = x; cx < x + len; ++cx) {
                 if (cx != x && cx != x + len - 1 && cy && cy + 1 < MOD_ZONE_H && ZBIT(prev, cx) && ZBIT(next, cx))

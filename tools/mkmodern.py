@@ -184,15 +184,21 @@ def rle_bits(row):
 
 
 def rle_ids(row):
-    """(id, length) pairs of a row of zone ids."""
+    """Runs of a row of zone ids (0-15), one byte each: id << 4 | (length - 1); a run longer than 16 goes on
+    in the next byte with the same id (modview.c joins them)."""
     out, cur, n = [], row[0], 0
-    for b in row:
-        if b == cur and n < 255:
+    for b in list(row) + [None]:
+        if b == cur:
             n += 1
-        else:
-            out += [cur, n]
-            cur, n = b, 1
-    return out + [cur, n]
+            continue
+        if not 0 <= cur < 16:
+            raise SystemExit('zone id %d does not fit 4 bits' % cur)
+        while n:
+            k = min(n, 16)
+            out.append(cur << 4 | (k - 1))
+            n -= k
+        cur, n = b, 1
+    return out
 
 
 def sun_tables():
@@ -315,7 +321,7 @@ def build(outdir):
          'extern const uint8_t mod_palette[4];',
          'extern const uint8_t mod_land_rle[];   /* runs, starting with sea; 255 continues */',
          'extern const uint16_t mod_land_idx[MOD_MAP_H];',
-         'extern const uint8_t mod_zone_rle[];   /* (zone id, length) pairs */',
+         'extern const uint8_t mod_zone_rle[];   /* runs: zone id << 4 | (length - 1), a longer run split */',
          'extern const uint16_t mod_zone_idx[MOD_ZONE_H];',
          'extern const int16_t mod_tand[93];     /* tan(declination) Q15, every 4 days */',
          'extern const int16_t mod_eot[93];      /* equation of time, s */',

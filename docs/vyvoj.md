@@ -20,7 +20,7 @@
   - G na MZ-800 cyklí historický vzhled → mapa → digitální hodiny → ručičkové hodiny, vždy přes černou obrazovku;
   - hodiny v barvách originálu, s rozšířením VRAM v 16 barvách, bez něj ve 4;
   - program se nahrává od 1200h, studená část je v 1200h–1FFFh ([rozhodnuti.md](rozhodnuti.md), paměť).
-  - **Místo:** pod 8000h zbývá asi 120 B, studená část má rezervu asi 145 B.
+  - **Místo:** pod 8000h zbývá asi 1,2 KB, studená část má rezervu asi 145 B.
 - **Další krok:** fáze 6, reálný HW (autor, [hw-otazky.md](hw-otazky.md)), README se snímky, release MZF.
 
 ## Plán vývoje
@@ -172,6 +172,8 @@ Volby zcc pro MZ:
     8bitové jako jeden bajt (`push af` + `inc sp`), zásobník uklízí volající, IX se zachová. sccz80 to dělá jinak
     (16bitové argumenty), proto se program sccz80 nepřekládá.
   - **zsdcc dělá z kreslení v C velký kód** (Bresenham s `int16_t` přes 600 B). Smyčky přes pixely psát v asm.
+    Stejně tak 32bitové porovnání a sčítání: odpočet nápovědy v `wc_time_t` stál přes 100 B, počítadlo snímků
+    v `uint16_t` jen pár bajtů.
   - **zsdcc `-SO3 --opt-code-size` přeložil v `render()` výraz `v = x >> 3` (x 16bitové) chybně**: smyčka posunu
     `srl a; rra` dávala nesmysl (pro x = 28 vyšlo 160). Okraj pásma se pak kreslil na špatná místa. Obejito vlastní
     funkcí `border_dots()`, která porovnává v pixelech. Při podivném chování v C podezírat i překladač a podívat se
@@ -192,6 +194,10 @@ Volby zcc pro MZ:
   - **Breakpointy si emulátor sám ukládá** do `<arch>-breakpoints.bpt` ve své složce (`auto_save`) a při dalším
     startu je načte (`auto_load`). Zapomenutý breakpoint pak zastaví každý další běh a test vypadá jako zaseknutý.
     `mzemu.py` proto v ini vypíná `auto_load` i `auto_save` a soubor přesměruje do `build/emu/`.
+  - **Klávesa se čte jednou za průchod hlavní smyčkou.** Stisk kratší než dlouhý průchod propadne. Platí to pro
+    start (okraj pásma pro mapu, asi 15 snímků), vstup do vzhledu MZ-800 a překreslení. Testy proto po startu
+    čekají 100 snímků a klávesy drží 3 snímky. Názvy kláves v emulátoru: `SPACE`, `LEFT`, `RIGHT`, `CR`,
+    `BREAK`, písmena.
   - Profilovat jde vzorkováním PC: `run` po jednom snímku a `get_registers`, PC přiřadit funkci podle
     `build/worldclock.map`.
 - **Hardware** (podrobnosti v [rozhodnuti.md](rozhodnuti.md)):
