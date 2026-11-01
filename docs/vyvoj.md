@@ -11,7 +11,8 @@
 - **Fáze 2 (základ a historický vzhled) hotová:**
   - `build.cmd` vytvoří `build/worldclock.mzf`, jeden program pro MZ-700 EU, MZ-700 JP a MZ-800;
   - testy v emulátoru procházejí na všech strojích, včetně nativního startu MZ-800 a hodinového běhu.
-- **Další krok:** fáze 3, Unicard RTC.
+- **Fáze 3 (Unicard RTC) hotová:** čas z karty při startu, dorovnání každých 10 minut, zápis do karty z dialogu.
+- **Další krok:** fáze 4, MZ-800. Nejdřív prototyp moderní mapy jako PNG ke schválení.
 
 ## Plán vývoje
 
@@ -20,7 +21,7 @@
 1. **Rekonstrukce předlohy** (`data/historic.txt`, [original.md](original.md)). **Hotovo.**
 2. **Bezpečný základ a historický vzhled.** **Hotovo.** Obnova CG-RAM při konci přijde ve fázi 4, až ji program
    bude měnit.
-3. **Unicard RTC:** detekce, čtení, dorovnávání.
+3. **Unicard RTC:** detekce, čtení, dorovnávání. **Hotovo.**
 4. **MZ-800:**
    - hiragana v CG-RAM;
    - prototyp moderní mapy jako PNG ke schválení;
@@ -59,6 +60,8 @@ nic nemění.
 | `src/mz/kbd.c` | matice klávesnice přes 8255 |
 | `src/mz/text700.c` | textová obrazovka, ASCII → kód displeje |
 | `src/mz/histview.c` | historická obrazovka: hodiny měst (po minutě postupně, jedno město za snímek), dvojtečky, pruh |
+| `src/mz/rtc_unicard.c` | Unicard: REVD, čtení a zápis RTC (porty 50h/51h) |
+| `src/mz/rtcsync.c` | čas z karty: start na hraně sekundy, dorovnání každých 10 minut, zápis z dialogu |
 | `src/mz/setup.c` | dialog datum / čas / domovské pásmo (klávesa `T`, bez času hned po startu) |
 | `src/core/wctime.c`, `zones.c` | přenositelné jádro času a seznam pásem |
 | `build/gen/historic.c` | generovaná data obrazovky (`tools/mkhistoric.py`) |
@@ -91,6 +94,8 @@ nic nemění.
 - **Další varianty běhu:**
   - `--dialog`: čas se zadá klávesami do dialogu;
   - `--native-boot`: MZ-800 nastartovaný v režimu MZ-800. Simuluje se kódem na 1200h, preview to neumí.
+  - `--rtc`: s připojenou Unicard. Program musí vzít čas z karty, emulovaná karta vrací místní čas hostitele.
+    Evropské stroje ho čtou jako pražský, japonský jako tokijský.
   - `--drift 60`: hodina emulovaného času, porovnání hodin s emulátorem. Na PAL vychází −2,54 s/h, na NTSC
     +4,59 s/h. Emulátor jede přesně 50/60 Hz, program dělí reálnými 15611/15700. Trvá asi 3,5 min.
 

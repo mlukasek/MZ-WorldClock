@@ -143,6 +143,30 @@ def run_drift(name, utc0, minutes, mzf, syms):
     return [] if abs(drift - want) < 0.2 else ['drift %+.2f s, expected %+.2f s' % (drift, want)]
 
 
+def run_rtc(name, mzf, syms, data):
+    """Unicard plugged in, no test hook: the program must take the time from the card's RTC (the emulated
+    card returns the host's local time; the program reads it as the local time of its home zone: Prague on
+    the European machines, Tokyo on the Japanese one) and show the historic screen at once."""
+    exe, rom, jp, ntsc, model = MACHINES[name]
+    fps = 60 if ntsc else 50
+    errs = []
+    home = ZoneInfo('Asia/Tokyo' if jp else 'Europe/Prague')
+    with Emu(exe, rom=rom, unicard=True) as emu:
+        emu.run_mzf(mzf)
+        emu.run(3 * fps)
+        host = datetime.now().replace(microsecond=0)               # the host's local time, naive
+        want = host.replace(tzinfo=home).astimezone(timezone.utc)
+        if not emu.mem(syms['_rtc_present'], 1)[0]:
+            return ['no RTC found']
+        got = EPOCH + timedelta(seconds=struct.unpack('<I', emu.mem(syms['_tb_last_utc'], 4))[0])
+        if abs((got - want).total_seconds()) > 3:
+            errs.append('clock %s, the card says %s' % (got.isoformat(), want.isoformat()))
+        if 3 <= got.second <= 57:                               # not at a minute change
+            check_screen(emu, data, got, jp, errs)
+        emu.screenshot(os.path.join(ROOT, 'work', 'emu', '%s-rtc.png' % name))
+    return errs
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--machine', default='all')
@@ -150,6 +174,7 @@ def main():
     ap.add_argument('--dialog', action='store_true')
     ap.add_argument('--native-boot', action='store_true', help='MZ-800: start the program in MZ-800 mode')
     ap.add_argument('--drift', type=float, default=0, help='run this many emulated minutes, report the drift')
+    ap.add_argument('--rtc', action='store_true', help='Unicard plugged in, the time from its RTC')
     a = ap.parse_args()
     utc0 = datetime.fromisoformat(a.utc).replace(tzinfo=timezone.utc)
     mzf = os.path.join(ROOT, 'build', 'worldclock.mzf')
@@ -160,6 +185,8 @@ def main():
     for name in names:
         if a.drift:
             errs = run_drift(name, utc0, a.drift, mzf, syms)
+        elif a.rtc:
+            errs = run_rtc(name, mzf, syms, data)
         else:
             if a.native_boot and MACHINES[name][4] != 1:
                 continue

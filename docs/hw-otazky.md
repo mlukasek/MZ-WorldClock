@@ -22,3 +22,6 @@ Reálné stroje má autor. U každé otázky je, proč na ní záleží.
 
 7. **Která verze firmwaru je v kartě**, a vrací příkazy 62h/63h (RTC) platné hodnoty? V jakém stavu je stavový bajt?
 8. **Jak se RTC nastavuje** (web, shell, CP/M utility) a jestli drží čas i po vypnutí (baterie).
+9. **Zápis času z dialogu (příkazy 61h, 60h):** přijme ho karta, zůstane po vypnutí a čte se pak zpět správně?
+   - Emulátor zápis neumí, je to ověřené jen proti dokumentaci firmwaru.
+10. **Doba čekání na hranu sekundy karty při startu:** obrazovka se objeví hned. Časy naskočí nejvýš po 1 s?

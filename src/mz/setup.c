@@ -2,13 +2,16 @@
  *
  *   DATE   2026-11-01        digits typed over a cursor, <- -> move it
  *   TIME   14:35             seconds start at 0 when CR is pressed
- *   ZONE   PRAGUE  UTC+1:00 EU DST     SPACE / up / down: the next / previous zone */
+ *   ZONE   PRAGUE  UTC+1:00 EU DST     SPACE / up / down: the next / previous zone
+ * A valid date and time is converted when the zone changes, so that it stays the same instant. With a
+ * Unicard the time is also written to the card (rtcsync.c). */
 #include "setup.h"
 #include "kbd.h"
 #include "text700.h"
 #include "timebase.h"
 #include "zones.h"
 #include "wctime.h"
+#include "rtcsync.h"
 
 #define ROW_DATE 7
 #define ROW_TIME 9
@@ -52,6 +55,34 @@ static void set_number(uint8_t first, uint8_t n, uint16_t v)
     }
 }
 
+/* The digits as a date and time: 0 = invalid date, 1 = invalid time, 2 = valid */
+static uint8_t digits_tm(struct wc_tm *tm)
+{
+    tm->year = number(0, 4);
+    tm->month = (uint8_t)number(4, 2);
+    tm->day = (uint8_t)number(6, 2);
+    tm->hour = (uint8_t)number(8, 2);
+    tm->min = (uint8_t)number(10, 2);
+    tm->sec = 0;
+    if (tm->year < WC_YEAR_MIN || tm->year > WC_YEAR_MAX || tm->month < 1 || tm->month > 12 || tm->day < 1
+        || tm->day > wc_days_in_month(tm->year, tm->month))
+        return 0;
+    return (tm->hour > 23 || tm->min > 59) ? 1 : 2;
+}
+
+static void tm_digits(const struct wc_tm *tm)
+{
+    uint8_t i;
+
+    set_number(0, 4, tm->year);
+    set_number(4, 2, tm->month);
+    set_number(6, 2, tm->day);
+    set_number(8, 2, tm->hour);
+    set_number(10, 2, tm->min);
+    for (i = 0; i < N_DIGITS; ++i)
+        put_digit(i, A_VALUE);
+}
+
 static void show_zone(uint8_t z)
 {
     const struct wc_zone *w = &wc_zones[z];
@@ -75,6 +106,7 @@ uint8_t setup_run(uint8_t *zone, uint8_t have_time)
     struct wc_tm tm;
     uint8_t cur = 0, i, key;
     uint16_t frac;
+    wc_time_t now;
     const struct wc_zone *w;
 
     if (have_time) {
@@ -86,12 +118,6 @@ uint8_t setup_run(uint8_t *zone, uint8_t have_time)
         tm.day = 1;
         tm.hour = tm.min = 0;
     }
-    set_number(0, 4, tm.year);
-    set_number(4, 2, tm.month);
-    set_number(6, 2, tm.day);
-    set_number(8, 2, tm.hour);
-    set_number(10, 2, tm.min);
-
     txt_fill(0x00, A_TEXT);
     txt_puts(1, 10, "*** WORLD CLOCK ***", ATTR(C_CYAN, C_BLACK));
     txt_puts(4, 2, "SET THE DATE, TIME AND HOME ZONE", A_TEXT);
@@ -106,8 +132,9 @@ uint8_t setup_run(uint8_t *zone, uint8_t have_time)
     txt_puts(18, 6, "SPACE    NEXT ZONE", A_HINT);
     txt_puts(19, 6, "CR       START THE CLOCK", A_HINT);
     txt_puts(20, 6, have_time ? "BREAK    BACK" : "BREAK    EXIT", A_HINT);
-    for (i = 0; i < N_DIGITS; ++i)
-        put_digit(i, A_VALUE);
+    if (rtc_present)
+        txt_puts(22, 6, "UNICARD CLOCK: SET WITH CR TOO", ATTR(C_GREEN, C_BLACK));
+    tm_digits(&tm);
     show_zone(*zone);
 
     for (;;) {
@@ -129,31 +156,30 @@ uint8_t setup_run(uint8_t *zone, uint8_t have_time)
         } else if (key == K_RIGHT) {
             if (cur < N_DIGITS - 1)
                 ++cur;
-        } else if (key == ' ' || key == K_DOWN) {
-            *zone = (*zone + 1) % wc_zone_count;
-            show_zone(*zone);
-        } else if (key == K_UP) {
-            *zone = (*zone + wc_zone_count - 1) % wc_zone_count;
+        } else if (key == ' ' || key == K_DOWN || key == K_UP) {
+            i = key == K_UP ? (*zone + wc_zone_count - 1) % wc_zone_count : (*zone + 1) % wc_zone_count;
+            if (digits_tm(&tm) == 2) {       /* the same instant in the new zone */
+                w = &wc_zones[*zone];
+                now = wc_to_utc(wc_make(&tm), w->std_minutes, w->dst);
+                wc_split(wc_to_local(now, wc_zones[i].std_minutes, wc_zones[i].dst), &tm);
+                tm_digits(&tm);
+            }
+            *zone = i;
             show_zone(*zone);
         } else if (key == K_BREAK) {
             return 0;
         } else if (key == K_CR) {
-            tm.year = number(0, 4);
-            tm.month = (uint8_t)number(4, 2);
-            tm.day = (uint8_t)number(6, 2);
-            tm.hour = (uint8_t)number(8, 2);
-            tm.min = (uint8_t)number(10, 2);
-            tm.sec = 0;
-            if (tm.year < WC_YEAR_MIN || tm.year > WC_YEAR_MAX || tm.month < 1 || tm.month > 12 || tm.day < 1
-                || tm.day > wc_days_in_month(tm.year, tm.month)) {
+            i = digits_tm(&tm);
+            if (i == 0) {
                 txt_puts(ROW_MSG, 6, "INVALID DATE", ATTR(C_RED, C_BLACK));
                 cur = 0;
-            } else if (tm.hour > 23 || tm.min > 59) {
+            } else if (i == 1) {
                 txt_puts(ROW_MSG, 6, "INVALID TIME", ATTR(C_RED, C_BLACK));
                 cur = 8;
             } else {
                 w = &wc_zones[*zone];
                 clock_set(wc_to_utc(wc_make(&tm), w->std_minutes, w->dst));
+                rtc_manual_set(*zone);
                 return 1;
             }
         }

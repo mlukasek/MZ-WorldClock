@@ -1,7 +1,8 @@
 /* MZ-WorldClock for the Sharp MZ-700 (EU, JP) and MZ-800: main loop.
  *
- * Start: detect the machine, start the time base, get the time (test hook or the dialog), then the historic
- * screen, one pass per frame. T sets the time again, BREAK returns to the monitor with its clock set. */
+ * Start: detect the machine, start the time base, get the time (the test hook, the Unicard RTC or the
+ * dialog), then the historic screen, one pass per frame. T sets the time again, BREAK returns to the monitor
+ * with its clock set. */
 #include "machine.h"
 #include "timebase.h"
 #include "kbd.h"
@@ -9,6 +10,8 @@
 #include "setup.h"
 #include "zones.h"
 #include "wctime.h"
+#include "rtcsync.h"
+#include "rtc_unicard.h"
 
 static uint8_t home;
 
@@ -24,16 +27,22 @@ int main(void)
     tb_init(mach.line_hz);
     home = mach.jp ? ZONE_TOKYO : ZONE_PRAGUE;
 
-    if (test_hook.flags & TEST_TIME_VALID)
+    rtc_present = rtc_detect();
+    if (test_hook.flags & TEST_TIME_VALID) {
         clock_set(test_hook.utc);
-    else if (!setup_run(&home, 0))
-        goto out;
+    } else {
+        if (rtc_present)
+            hist_draw();             /* the screen while the card's second is awaited */
+        if (!rtc_start(home) && !setup_run(&home, 0))
+            goto out;
+    }
 
     hist_draw();
     for (;;) {
         tb_wait_frame();
         now = clock_now(&frac);
         hist_update(now, frac < tb_line_hz / 2);
+        rtc_poll(now, home);
         key = kbd_get();
         if (key == K_BREAK)
             break;

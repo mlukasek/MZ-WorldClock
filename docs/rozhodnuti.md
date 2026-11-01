@@ -100,3 +100,23 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 - **Konec:**
   - před návratem se čeká na uvolnění kláves, aby monitor neviděl BREAK;
   - hodiny monitoru se nastaví na místní čas domovského pásma (TIMST), PC2=1, EI, smaže se obrazovka.
+
+## 2026-11-01: Unicard RTC
+
+- **Detekce:** REVD (06h), stav po STSR `(s0 & 83h) == 02h`, `s1 == 06h`, `s2 == 4`. Bity 2–5 bajtu 0 hlásí otevřené
+  soubory, proto maska. Bez karty porty plavou a stav nesedí.
+- **Čtení:** datum (62h), čas (63h) a znovu datum. Když se datum mezitím změnilo, opakuje se. Hodnoty jsou binárně.
+  - Rok mimo 2020–2099 nebo neplatné údaje znamenají nenastavené hodiny a program nabídne dialog. Typický případ je
+    výchozí rok 1980 na MZPico.
+- **Karta drží místní čas domovského pásma.** Výchozí je Praha, na japonském stroji Tokio.
+- **Start:**
+  - čeká se na změnu sekundy karty a hodiny se nastaví na její hraně;
+  - čekání trvá nejvýš 2 s vlastních hodin, pak se vezme přečtený čas;
+  - s nalezenou kartou se historická obrazovka vykreslí hned, aby po dobu čekání nebyla vidět hlavička monitoru.
+- **Za běhu:** každých 10 minut se karta čte jednou za snímek, dokud se nezmění sekunda. Hodiny se pak nastaví, přesnost
+  je jeden snímek.
+- **Ruční nastavení (T):**
+  - čas se zapíše i do karty (61h, 60h);
+  - když ho karta nepřijme, program ji dál nenásleduje, jinak by ruční čas při dorovnání přepsala;
+  - emulovaná Unicard zápis neumí;
+  - při změně pásma v dialogu se platný čas přepočítá na stejný okamžik v novém pásmu.
