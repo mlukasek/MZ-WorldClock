@@ -13,6 +13,7 @@
 ## Plán vývoje
 
 0. **Založení:** git, GPL-3.0, docs, `tools/emu`, smoke test vlastního crt0 na všech strojích. **Hotovo.**
+   Repo: https://github.com/mlukasek/MZ-WorldClock.
 1. **Rekonstrukce předlohy** (`data/historic.txt`, [original.md](original.md)). **Hotovo.**
 2. **Bezpečný základ a historický vzhled:**
    - start, konec a detekce na všech strojích, včetně nativního startu MZ-800 a obnovy CG-RAM;

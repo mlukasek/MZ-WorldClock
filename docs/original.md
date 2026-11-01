@@ -31,7 +31,11 @@ naplněný zhruba z poloviny.
    - `tools/ref/extract_map.py`: blok svítí od 0,6, tmavý je do 0,15.
    - **Nejisté bloky:** 85 bloků je mezi 0,15 a 0,6, převážně na okrajích pevnin. Rozhodne je druhé čtení (remake).
      V 10 z nich by se prosté prahování na 0,45 lišilo od remaku. Všechny jsou na hranici rozlišení fotky.
-   - **Jediný jasný rozdíl proti remaku:** blok (řádek 21, sloupec 15) je na fotce tmavý (0,07).
+   - **Jediný jasný rozdíl proti remaku:** blok (řádek 21, sloupec 15) je na fotce tmavý (0,08).
+     - Na obrazovce 40×25 je to pravá dolní tečka buňky na řádku 10, sloupci 7: Středozemní moře, dva řádky pod
+       dvojtečkou času u Paříže.
+     - Okolní pevnina má 0,82–0,98, sousední bloky moře 0,03–0,09.
+     - Remake tam má tečku navíc. **Autor potvrdil: co nejvěrněji podle katalogu, blok zůstává tmavý.**
 3. **Popisky a časy:** v každé buňce textu se změří červená (názvy) a žlutá (časy). Všechny jsou ve stejných buňkách
    jako v remaku. Jediná výjimka je popisek Los Angeles (viz Rozdíly mezi fotkami).
 4. **Kontrola:** náhled vedle vyrovnané fotky (`work/ref/cmp_catalog_jp.png`).

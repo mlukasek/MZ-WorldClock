@@ -37,8 +37,8 @@ Autor: Martin Lukášek. Komunikace **česky**.
 
 - **Jazyk:** kód, komentáře a skripty **anglicky**, dokumentace **česky**.
 - **Necommitovat** obsah `input/`, ROM, CG-ROM ani nic z nich odvozeného (fonty Sharp). Licence projektu je GPL-3.0.
-- **Git:** lokální commity průběžně, **push jen na výslovný pokyn**. Repo na GitHubu (`mlukasek/MZ-WorldClock`,
-  veřejné) založit až s prvním pushem.
+- **Git:** lokální commity průběžně, **push jen na výslovný pokyn**. Veřejné repo:
+  https://github.com/mlukasek/MZ-WorldClock (`origin`, větev `main`).
 - **Toolchain:**
   - z88dk **nightly** (`E:\SHARP_GIT\Tools\z88dk-nightly`), target `+mz` s naším `src/mz/crt0.asm`;
   - konzoli z88dk (printf, conio) nepoužívat, volá monitor;
