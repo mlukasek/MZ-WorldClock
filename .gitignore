@@ -1,0 +1,9 @@
+build/
+work/
+__pycache__/
+*.pyc
+
+# Third-party material without a licence (the 2019 remake, advertisement and catalogue photos, screenshots):
+# local only, never commit. ROM and CG-ROM images are never committed either.
+input/
+*.rom
