@@ -219,8 +219,9 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 
 - **Klávesa G** přepíná historický a moderní vzhled (jen MZ-800). M prohazuje kontinenty v obou vzhledech.
 - **Barvy (paleta A):** 0 noční moře černé, 1 denní moře modré (#4040AC), 2 pevnina zelená, v noci s černým
-  rastrem, 3 texty, značky a okraj pásma světle žluté. Rozšíření VRAM se nepoužívá.
+  rastrem, 3 texty, značky a okraj pásma světle žluté.
   - Rovina I = moře ve dne, rovina II = pevnina ve dne nebo rastr v noci.
+  - S rozšířením VRAM jsou texty barevné (viz oddíl o hodinách níže).
 - **Rozvržení 320×200:**
   - řádek 0: `*** WORLD CLOCK ***` a datum `DAY DD.MM.YYYY`;
   - řádky 10–169: mapa 320×160 (80° s. š. až 64° j. š., levý okraj dobového pohledu 25° z. d.);
@@ -254,17 +255,25 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
     se neobnoví CG-RAM a nevykreslí historický vzhled.
 - **Digitální hodiny: varianta B** (autor): HH:MM:SS ze znaků CG-ROM zvětšených 4×6, pod nimi domovské pásmo
   a jeho posun, 9 měst ve 3 sloupcích, pruh sekund s pravítkem. Domovský čas se dole neopakuje.
-- **Ručičkové hodiny:** ciferník 1,2× širší než vysoký (body MZ-800 jsou na obrazovce 4:3 asi 1,2× vyšší než
-  široké), 60 teček, 12 čárek, číslice 12, 3, 6, 9, ručičky po minutových polohách (hodinová po 12 minutách),
+- **Ručičkové hodiny:** ciferník kulatý na čtvercových bodech, 60 teček, 12 čárek, číslice 12, 3, 6, 9, ručičky po minutových polohách (hodinová po 12 minutách),
   vteřinová s přesahem. Vedle domovské pásmo, čas 2×2, posun a seznam měst.
   - Ciferník je ve dne doma světle modrý, v noci tmavý. Den a noc se počítá stejně jako na mapě.
+  - Původně byl 1,2× širší než vysoký, protože body MZ-800 jsou na obrazovce 4:3 (CRT) asi 1,2× vyšší než
+    široké. Autor ho ale v emulátoru i na monitoru u reálného MZ-800 viděl zploštělý, a tak to uvidí většina lidí.
+    Teď je kulatý na čtvercových bodech, levý okraj zůstal na x = 2 a mezi hodinami a městy je víc místa. Na
+    skutečném CRT 4:3 bude asi o 20 % vyšší než široký.
 - **Barvy v ladění originálu** (autor): titulek azurový, jména červená, časy žluté, pruh purpurový, pravítko
   zelené. U měst je čas ve dne žlutý a v noci modrý.
   - **S rozšířením VRAM** 16 barev (DMD 02h, paleta 0–3 identická, čísla barev jsou IGRB): titulek 13, číslice
     14, jména 10, noc 9, pruh 11, pravítko 12, ciferník 9 / 1, obruba 2, značky 15, vteřinová ručička 10.
   - **Bez rozšíření** 4 barvy: černá, modrá, světle červená, světle žlutá. Pravítko je modré a pruh červený.
   - Rozšíření se pozná zápisem do roviny III a čtením zpět (bez něj FFh), jednou za běh.
-- **Mapa zůstává ve schválené paletě A** a ve 4 barvách.
+- **Mapa s rozšířením VRAM** (autor) je také v 16 barvách (DMD 02h). Paleta 0–3 je paleta A, takže moře,
+  pevnina, noc, značky a okraj pásma zůstávají; texty dostanou barvy 4–15: titulek, datum a posun 13 (světle
+  azurová), jména měst 10 (světle červená), časy 14 (světle žlutá), pruh 11 (růžová), pravítko 12 (světle
+  zelená). Bez rozšíření zůstává ve 4 barvách palety A.
+  - Řádek mapy se zapisuje REPLACE barvou 1 (rovina I; II, III a IV smazané) a pak SINGLE do roviny II, takže
+    překreslení mapy smaže i roviny III a IV pod texty, které se pak kreslí znovu.
 - **Kreslení** (`gfx.asm`) jde přes zápisy GDG PSET (nastaví body bajtu na barvu) a REPLACE (barva na černé).
   Ve 4 i 16 barvách je to tentýž kód.
 - **Každou sekundu** se překreslí jen změněné číslice. U ručiček se stará vteřinová přetáhne barvou ciferníku,

@@ -93,15 +93,16 @@ io_wr_port:
 
 ; void row_out(volatile uint8_t *vram_row) __z88dk_fastcall;
 ; One map row of the MZ-800's modern look into VRAM (mapped): plane I = ~land & day (sea by day),
-; plane II = land & (day | dither) (land by day, dithered by night). _row_land, _row_day: 40 bytes each, in
+; plane II = land & (day | dither) (land by day, dithered by night); in the 16-colour mode planes III and IV
+; cleared (the texts over the map use them). _row_land, _row_day: 40 bytes each, in
 ; screen order; _row_dither: 55h / AAh. (modview.c; the same as tools/modref.py map_row.)
 _row_out:
     push    ix
     ld      b,h
     ld      c,l
     push    bc
-    ld      a,$01
-    out     ($CC),a                     ; write format: SINGLE, plane I
+    ld      a,$81
+    out     ($CC),a                     ; write format: REPLACE colour 1: plane I, planes II-IV cleared
     ld      hl,_row_land
     ld      de,_row_day
     ld      ixl,40

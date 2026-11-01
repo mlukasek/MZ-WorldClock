@@ -104,15 +104,14 @@ void gfx_end(void)
     io_native = 0;
 }
 
-/* The shadow: the glyphs in colour 0 one pixel right and down (in the 4-colour mode the same as RESET of
-   planes I, II), then the glyphs in colour 3 (OR) */
-void gfx_text(uint8_t bx, uint8_t y, const char *s, uint8_t shadow)
+/* The shadow: the glyphs in colour 0 one pixel right and down, then the glyphs in the colour */
+void gfx_text(uint8_t bx, uint8_t y, const char *s, uint8_t colour)
 {
-    if (shadow) {
+    if (colour & GFX_SHADOW) {
         gfx_ptext((uint16_t)bx * 8 + 1, y + 1, s, 0);
-        gfx_ptext((uint16_t)bx * 8, y, s, 3);
+        gfx_ptext((uint16_t)bx * 8, y, s, colour & 0x0F);
     } else {
-        gfx_ctext(bx, y, s, 3, 1, 1);
+        gfx_ctext(bx, y, s, colour, 1, 1);
     }
 }
 

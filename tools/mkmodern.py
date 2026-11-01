@@ -41,12 +41,13 @@ ZONE_SCALE = 2                       # the zone map has 2x2-pixel cells
 # The clock screens (src/mz/clockview.c, tools/clockref.py). Digital: HH:MM:SS from the CG-ROM font 4x6
 # enlarged at byte column DIG_BX, the home zone and its offset centred on DIG_HOME_Y, the cities in 3 columns
 # (byte columns GRID_BX) and 3 rows from GRID_Y, the seconds bar as on the map. Analog: a face centred at
-# CLK_CX, CLK_CY, vertical radius CLK_R inside a rim up to CLK_RO, 1.2x as wide as tall (ASPECT_Q8: the
-# MZ-800's pixels are about 1.2x as tall as wide on a 4:3 screen); beside it from byte column PANEL_BX the home
-# zone, its time 2x2, its offset and the cities one per line.
+# CLK_CX, CLK_CY, vertical radius CLK_R inside a rim up to CLK_RO, ASPECT_Q8 / 256 as wide as tall: round on
+# square pixels, as an emulator and today's monitors show the MZ-800 (the author; on a 4:3 CRT the pixels are
+# about 1.2x as tall as wide and the face looks that much taller); beside it from byte column PANEL_BX the
+# home zone, its time 2x2, its offset and the cities one per line.
 DIG_BX, DIG_Y, DIG_HOME_Y = 4, 24, 80
 GRID_BX, GRID_Y, GRID_DY = (1, 15, 29), 104, 22
-CLK_CX, CLK_CY, CLK_R, CLK_RO, ASPECT_Q8 = 94, 106, 72, 77, 307
+CLK_CX, CLK_CY, CLK_R, CLK_RO, ASPECT_Q8 = 79, 106, 72, 77, 256     # the left edge at x 2
 HAND_H, HAND_M, HAND_S, HAND_TAIL = 36, 57, 60, 11       # lengths; the second hand also runs back by the tail
 TICK_DOT, TICK_IN, TICK_OUT, NUM_R = 69, 63, 70, 54      # minute dots, 5-minute marks, numerals 12 3 6 9
 PANEL_BX, PANEL_NAME_Y, PANEL_TIME_Y, PANEL_OFF_Y = 24, 24, 34, 54

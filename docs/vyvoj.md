@@ -20,7 +20,7 @@
   - G na MZ-800 cyklí historický vzhled → mapa → digitální hodiny → ručičkové hodiny, vždy přes černou obrazovku;
   - hodiny v barvách originálu, s rozšířením VRAM v 16 barvách, bez něj ve 4;
   - program se nahrává od 1200h, studená část je v 1200h–1FFFh ([rozhodnuti.md](rozhodnuti.md), paměť).
-  - **Místo:** pod 8000h zbývá asi 270 B, studená část má rezervu asi 145 B.
+  - **Místo:** pod 8000h zbývá asi 120 B, studená část má rezervu asi 145 B.
 - **Další krok:** fáze 6, reálný HW (autor, [hw-otazky.md](hw-otazky.md)), README se snímky, release MZF.
 
 ## Plán vývoje
@@ -132,11 +132,13 @@ nic nemění.
   - `--drift 60`: hodina emulovaného času, porovnání hodin s emulátorem. Na PAL vychází −2,54 s/h, na NTSC
     +4,59 s/h. Emulátor jede přesně 50/60 Hz, program dělí reálnými 15611/15700. Trvá asi 3,5 min.
 - **Vzhledy MZ-800:** `python tests/emu/run_modern.py [--utc ...]` porovná VRAM bajt po bajtu s referencí:
-  - mapa (roviny I a II, `tools/modref.py`): po G, po M (atlantický pohled), po změně minuty, po návratu M;
+  - mapa (roviny I–IV, 16 barev, `tools/modref.py`): po G, po M (atlantický pohled), po změně minuty, po
+    návratu M;
   - hodiny (roviny I–IV, `tools/clockref.py`): digitální po G a o sekundu později, ručičkové po G a po změně
     minuty;
   - G zpět (historická obrazovka a vlastní znaky v CG-RAM) a BREAK (CG-RAM obnovená z CG-ROM);
-  - totéž ještě jednou bez rozšíření VRAM (příznak `TEST_NO_EXTVRAM` v testovacím bloku): hodiny ve 4 barvách.
+  - totéž ještě jednou bez rozšíření VRAM (příznak `TEST_NO_EXTVRAM` v testovacím bloku): mapa a hodiny ve
+    4 barvách.
 
 - **Jádro času:** `python tests/core/run_core.py [--cc sdcc|sccz80]`.
   - Přeloží `tests/core/test_wctime.c` pro `+test` a spustí ho v `z88dk-ticks`.

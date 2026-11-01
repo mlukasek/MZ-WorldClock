@@ -22,6 +22,13 @@
 
 static const char *const day_name[7] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
 
+/* The colours of the texts, the bar and the ruler: with the VRAM extension 16 colours in the tones of the
+   period screen (IGRB; 0-3 go through the palette, i.e. the map's own colours), else the 4 of the map */
+enum { M_TITLE, M_NAME, M_TIME, M_BAR, M_RULER, M_N };
+static const uint8_t mcol16[M_N] = {13, 10, 14, 11, 12};
+static const uint8_t mcol4[M_N] = {3, 3, 3, 3, 2};
+static const uint8_t *col;
+
 static uint8_t home, shift;            /* shift: the view's rotation in bytes */
 static uint16_t yday;
 static int16_t tand;
@@ -350,7 +357,7 @@ static void render(uint8_t y0, uint8_t y1, uint8_t c0, uint8_t c1)
             pl1[c] = ~row_land[c] & row_day[c];
             pl2[c] = row_land[c] & (row_day[c] | dither);
         }
-        gfx_wf(WF_PLANE_I);
+        gfx_wf(WF_REPLACE(1));                 /* plane I; II (written next), III, IV cleared */
         for (c = c0; c < c1; ++c)
             row[c] = pl1[c];
         gfx_wf(WF_PLANE_II);
@@ -378,8 +385,8 @@ static void render(uint8_t y0, uint8_t y1, uint8_t c0, uint8_t c1)
             c = 5;
         if (y + 18 <= sy0 || y >= sy1 || bx + c + 1 <= c0 || bx >= c1)
             continue;
-        gfx_text(bx, y, ct->name, 1);
-        gfx_text(bx, y + 8, mod_city_hm(i, (wc_time_t)shown_minute * 60), 1);
+        gfx_text(bx, y, ct->name, GFX_SHADOW | col[M_NAME]);
+        gfx_text(bx, y + 8, mod_city_hm(i, (wc_time_t)shown_minute * 60), GFX_SHADOW | col[M_TIME]);
     }
 }
 
@@ -394,7 +401,7 @@ static void home_line(wc_time_t utc)
     n = (uint8_t)strlen(w->name);
     memcpy(mod_text, w->name, n);
     mod_text[10] = 0;
-    gfx_text(0, MOD_HOME_Y, mod_text, 0);
+    gfx_text(0, MOD_HOME_Y, mod_text, col[M_NAME]);
     mod_text[0] = ' ';
     two(mod_text + 1, tm.hour);
     mod_text[3] = ':';
@@ -402,17 +409,17 @@ static void home_line(wc_time_t utc)
     mod_text[6] = ':';
     two(mod_text + 7, tm.sec);
     mod_text[9] = 0;
-    gfx_text(10, MOD_HOME_Y, mod_text, 0);
+    gfx_text(10, MOD_HOME_Y, mod_text, col[M_TIME]);
     /* the offset right-aligned in 8 characters at byte column 32 */
     k = mod_offset_text(wc_offset(utc, w->std_minutes, w->dst));
     memmove(mod_text + 8 - k, mod_text, k);
     memset(mod_text, ' ', 8 - k);
     mod_text[8] = 0;
-    gfx_text(32, MOD_HOME_Y, mod_text, 0);
+    gfx_text(32, MOD_HOME_Y, mod_text, col[M_TITLE]);
     /* the date in the title row: DAY DD.MM.YYYY at byte column 26 */
     if (tm.day != shown_mday) {
         shown_mday = tm.day;
-        gfx_text(26, 0, mod_date_text(&tm), 0);
+        gfx_text(26, 0, mod_date_text(&tm), col[M_TITLE]);
     }
 }
 
@@ -475,20 +482,20 @@ void mod_enter(uint8_t h, uint8_t view, wc_time_t utc)
 
     home = h;
     shift = view ? MOD_ATL_SHIFT / 8 : 0;
-    gfx_begin(mod_palette, 0);
+    col = gfx_begin(mod_palette, mod_palette) ? mcol16 : mcol4;
     gfx_map();
-    gfx_text(0, 0, "*** WORLD CLOCK ***", 0);
+    gfx_text(0, 0, "*** WORLD CLOCK ***", col[M_TITLE]);
     border_build();
     shown_minute = utc / 60;
     sun(utc);
     for (y = 0; y < MOD_MAP_H; ++y)
         interval(y);
     render(0, MOD_MAP_H, 0, 40);
-    mod_ruler(2);
+    mod_ruler(col[M_RULER]);
     shown_mday = 0;
     home_line(utc);
     shown_sec = (uint8_t)(utc % 60);
-    mod_bar(shown_sec, 3);
+    mod_bar(shown_sec, col[M_BAR]);
     memset(dirty, 0, sizeof(dirty));
     dirty_clocks = 0;
     gfx_unmap();
@@ -526,7 +533,7 @@ void mod_update(wc_time_t utc)
     if (sec != shown_sec) {
         shown_sec = sec;
         home_line(utc);
-        mod_bar(sec, 3);
+        mod_bar(sec, col[M_BAR]);
     }
     gfx_unmap();
 }

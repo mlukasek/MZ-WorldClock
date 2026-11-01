@@ -28,9 +28,10 @@ void gfx_unmap(void);                  /* IN (E1h) */
 void gfx_wf(uint8_t wf);
 
 /* Drawing, while mapped (gfx.asm: gfx_ctext, gfx_ptext, gfx_hspan, gfx_line). Texts: ASCII 20h-5Fh. */
-/* Text from the CG-ROM at byte column bx, pixel row y: with a black shadow 1 pixel right and down over what
- * is there (colour 3, 4-colour mode), or opaque (colour 3 on colour 0) */
-void gfx_text(uint8_t bx, uint8_t y, const char *s, uint8_t shadow);
+/* Text from the CG-ROM at byte column bx, pixel row y in a colour: opaque (on colour 0), or with
+ * GFX_SHADOW | colour over what is there, with a black shadow 1 pixel right and down */
+#define GFX_SHADOW 0x80
+void gfx_text(uint8_t bx, uint8_t y, const char *s, uint8_t colour);
 /* Opaque text in colour on colour 0, each glyph pixel sx (1, 2 or 4) wide and sy tall */
 void gfx_ctext(uint8_t bx, uint8_t y, const char *s, uint8_t colour, uint8_t sx, uint8_t sy);
 void gfx_ptext(uint16_t x, uint8_t y, const char *s, uint8_t colour);   /* only the glyph pixels, any x */

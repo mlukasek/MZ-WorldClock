@@ -2,13 +2,13 @@
 
     python tests/emu/run_modern.py [--utc 2026-11-01T15:00:05]
 
-On the emulated MZ-800: the time into the test hook, G (the map), compare VRAM planes I and II with
+On the emulated MZ-800: the time into the test hook, G (the map, 16 colours), compare VRAM planes I-IV with
 tools/modref.py at the program's time; M (the Atlantic view), compare; run over a minute change (the moved
 day and night and the new clocks are drawn a few rows per frame), compare; M back, compare. G (the digital
 clock, 16 colours), compare planes I-IV with tools/clockref.py, again a second later; G (the analog clock),
 compare, again over a minute change; G back to the historic look (the text screen and the own glyphs in the
 CG-RAM); BREAK (the CG-RAM restored). Then once more acting as without the VRAM extension (test hook flag):
-both clocks in 4 colours, planes III and IV empty. Screenshots go to work/emu/.
+the map and both clocks in 4 colours, planes III and IV empty. Screenshots go to work/emu/.
 """
 import argparse
 import os
@@ -32,16 +32,16 @@ EPOCH = datetime(2000, 1, 1, tzinfo=timezone.utc)
 HOME = 'PRAGUE'          # the default home zone on a European machine
 
 
-def compare(emu, syms, d, view, label, errs):
+def compare(emu, syms, d, view, label, errs, hicolor=True):
     utc = EPOCH + timedelta(seconds=struct.unpack('<I', emu.mem(syms['_tb_last_utc'], 4))[0])
-    want = modref.render(d, utc, [z[0] for z in d['zones']].index(HOME), view)
-    for k in (0, 1):
+    want = modref.render(d, utc, [z[0] for z in d['zones']].index(HOME), view, hicolor)
+    for k in range(4):
         got = emu.region('vram_phys_plane', 0, 8000, sub_id=k)
         bad = [i for i in range(8000) if got[i] != want[k][i]]
         if bad:
             i = bad[0]
             errs.append('%s (%s, %s): plane %s, %d bytes differ, first row %d byte %d: %02X want %02X'
-                        % (label, view, utc.time(), 'I' if k == 0 else 'II', len(bad), i // 40, i % 40,
+                        % (label, view, utc.time(), 'I II III IV'.split()[k], len(bad), i // 40, i % 40,
                            got[i], want[k][i]))
     emu.screenshot(os.path.join(ROOT, 'work', 'emu', 'modern-%s.png' % label))
     modref.write_png(want, os.path.join(ROOT, 'work', 'emu', 'modern-%s-ref.png' % label))
@@ -114,12 +114,13 @@ def main():
         emu.key('G', 3, 50)
         emu.screenshot(os.path.join(ROOT, 'work', 'emu', 'modern-back-historic.png'))
         back_to_historic(emu, syms, data, errs, 'G')
-    # without the VRAM extension: the clocks in 4 colours
+    # without the VRAM extension: the map and the clocks in 4 colours
     with Emu('mz800emu.exe') as emu:
         emu.run_mzf(os.path.join(ROOT, 'build', 'worldclock.mzf'))
         emu.poke(syms['_test_hook'] + 4, bytes([3]) + struct.pack('<I', int((utc0 - EPOCH).total_seconds())))
         emu.run(50)
         emu.key('G', 3, 150)
+        compare(emu, syms, d, 'pacific', 'enter-4', errs, False)
         emu.key('G', 3, 50)
         compare_clock(emu, syms, d, False, False, 'digital-4', errs)
         emu.key('G', 3, 50)
