@@ -92,7 +92,7 @@ def program_time(emu, syms):
 
 # The state the MZ-800 IPL leaves when it starts a program in MZ-800 mode (rear switch SW1): native mode
 # (DMD 0), VRAM and CG-ROM not mapped, palette black. The emulator preview cannot boot that way, so this stub
-# at 1200h sets it up and jumps to the program.
+# at B000h (free RAM between the BSS and the stack) sets it up and jumps to the program.
 NATIVE_STUB = bytes([0xF3, 0x3E, 0x00, 0xD3, 0xCE, 0xDB, 0xE1,      # DI; OUT (CEh),0; IN A,(E1h)
                      0x3E, 0x00, 0xD3, 0xF0, 0x3E, 0x10, 0xD3, 0xF0,  # palette 0-3 black
                      0x3E, 0x20, 0xD3, 0xF0, 0x3E, 0x30, 0xD3, 0xF0,
@@ -106,8 +106,8 @@ def run_machine(name, utc0, dialog, mzf, syms, data, native=False):
     with Emu(exe, rom=rom) as emu:
         emu.run_mzf(mzf)
         if native:
-            emu.poke(0x1200, NATIVE_STUB)
-            emu.set_pc(0x1200)
+            emu.poke(0xB000, NATIVE_STUB)
+            emu.set_pc(0xB000)
         hook = syms['_test_hook']
         if emu.mem(hook, 4) != b'WCTH':
             return ['no test hook at %04X' % hook]
@@ -203,7 +203,9 @@ def run_rtc(name, mzf, syms, data):
     home = ZoneInfo('Asia/Tokyo' if jp else 'Europe/Prague')
     with Emu(exe, rom=rom, unicard=True) as emu:
         emu.run_mzf(mzf)
-        emu.run(3 * fps)
+        # up to 2 s waiting for the card's second, the screen, on the MZ-800 0.3 s for the modern look's zone
+        # border (mod_prepare), then the clocks one city per frame
+        emu.run(4 * fps)
         host = datetime.now().replace(microsecond=0)               # the host's local time, naive
         want = host.replace(tzinfo=home).astimezone(timezone.utc)
         if not emu.mem(syms['_rtc_present'], 1)[0]:

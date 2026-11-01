@@ -24,17 +24,23 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
 
 ## 2026-11-01: paměť a start
 
-- **Load a exec 2000h, kód a data v 2000h–7FFFh.**
+- **Exec 2000h, hlavní část kódu a dat v 2000h–7FFFh.**
   - Na MZ-800 mapuje `IN (E0h)` spolu s VRAM i CG-ROM na 1000h–1FFFh.
   - V režimu MZ-700 mapuje CG-RAM na C000h–CFFFh.
-- **Program musí skončit pod 8000h.** V režimu 320×200 MZ-800 mapuje `IN (E0h)` VRAM na 8000h–9FFFh.
+- **Hlavní část musí skončit pod 8000h.** V režimu 320×200 MZ-800 mapuje `IN (E0h)` VRAM na 8000h–9FFFh.
+- **Load od 1200h** (autor 2026-11-01, běžné u programů MZ-700). V 1200h–1FFFh je studená část (sekce `code_cold`
+  a `rodata_cold`): kód a konstanty, které nikdy neběží ani se nečtou s namapovaným CG-ROM, tj. ne z moderního
+  vzhledu a ne při práci s CG-RAM.
+  - Dnes tam jsou `setup.c`, `rtc_unicard.c` a `rtcsync.c` (`#pragma codeseg code_cold`, `#pragma constseg
+    rodata_cold`, přeloženo zsdcc).
+  - Nesmí tam být nic, co volá moderní vzhled nebo `cgram.c`: knihovna z88dk, `wctime.c`, `text700.c`
+    (`txt_code` používá `gfx_text`), data pásem a znaků.
+  - `tools/mkmzf.py` spojí obě části, mezeru doplní nulami a hlídá, že studená končí pod 2000h a hlavní pod 8000h.
 - **Zásobník pod C000h, nad BSS** (do 2026-11-01 pod 8000h, místo se uvolnilo pro program). Monitor má zásobník
   na 10F0h, tj. v okně CG-ROM.
 - **BSS na A000h**, nuluje se při startu a není v MZF. A000h–BFFFh je RAM v každém používaném režimu.
-- **Místa je málo:** po fázi 4 program končí na 7DE4h, zbývá 540 B. Pro fázi 5 bude potřeba místo získat, např.:
-  - load na 1200h jako běžné programy MZ-700 (1200h–1FFFh je na MZ-800 pod oknem CG-ROM, smí tam jen kód a data,
-    která se nepoužívají s namapovanou VRAM);
-  - zmenšit data pásem (3,5 KB RLE, slouží jen pro okraj domovského pásma).
+- **Místo:** po fázi 4 končil program na 7DE4h (zbývalo 540 B). Po přesunu studené části (3,4 KB) končí hlavní
+  část na 7074h. Další rezerva: data pásem (3,5 KB RLE, slouží jen pro okraj domovského pásma).
 - **Vlastní crt0** (`src/mz/crt0.asm`, odvozený od z88dk `mz_crt0`):
   - první instrukce je DI;
   - žádná konzole z88dk, protože volá monitor;

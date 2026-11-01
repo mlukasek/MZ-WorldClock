@@ -26,7 +26,7 @@ Autor: Martin Lukášek. Komunikace **česky**.
 - `docs/remake-2019.md`: rozbor japonského remaku v `input/World-Clock/`. Je jen ke studiu, kód nepřebírat.
 - **Kód:**
   - `src/core/`: přenositelné C bez HW;
-  - `src/mz/`: HAL Sharp, vlastní `crt0.asm` (ORG 2000h, DI, SP C000h, BSS A000h);
+  - `src/mz/`: HAL Sharp, vlastní `crt0.asm` (exec 2000h, load 1200h se studenou částí, DI, SP C000h, BSS A000h);
   - `tools/`: generátory v Pythonu, `mkmzf.py`, `emu/mzemu.py` (ovládání emulátoru přes MCP rouru);
   - `tests/`.
 - `input/`: cizí materiály bez licence, jen lokálně (v `.gitignore`).
@@ -49,7 +49,8 @@ Autor: Martin Lukášek. Komunikace **česky**.
 - **Měřit, nehádat:**
   - chování ověřovat v emulátoru (`tools/emu/mzemu.py`);
   - jádro v C přes `z88dk-ticks` proti referenci v Pythonu.
-- **Emulátor spouštět jen přes `mzemu.py`** (vlastní ini, `--no-save-ini`). Soubory v jeho složce neměnit.
+- **Emulátor spouštět přes `mzemu.py`** (vlastní ini, `--no-save-ini`). Soubory v jeho složce se smí měnit i mazat,
+  když je to potřeba (autor 2026-11-01: nic důležitého tam není, dá se obnovit). Zdrojáky `..\mz800emu` jen ke čtení.
 - **Reálný HW má autor.** Otázky k ověření sbírat v `docs/hw-otazky.md`.
 - **Každá změna:**
   - `cmd /c build.cmd`;

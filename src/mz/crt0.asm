@@ -3,7 +3,8 @@
 ; Derived from z88dk lib/target/mz/classic/mz_crt0.asm (Stefano Bodrato, UncleBod; z88dk Clarified
 ; Artistic License). Changes:
 ;   - ORG 2000h: on the MZ-800, IN (E0h) maps the CG-ROM over 1000h-1FFFh together with the VRAM,
-;     so neither code nor stack may live there;
+;     so neither the stack nor code used then may live there; the cold part (code_cold, rodata_cold) is at
+;     1200h-1FFFh, loaded with the rest from 1200h;
 ;   - DI first: the monitor starts the program with interrupts enabled, we never use them;
 ;   - our own stack below C000h, above the BSS at A000h (the monitor's stack is at 10F0h, inside the CG-ROM
 ;     window; A000h-BFFFh is RAM in MZ-700 mode and in the MZ-800's 320x200 mode, whose VRAM window is
@@ -79,3 +80,10 @@ l_dcal:
     INCLUDE "crt/classic/crt_runtime_selection.inc"
 
     INCLUDE "crt/classic/crt_section.inc"
+
+; Code and constants that never run or are read while the MZ-800 has the CG-ROM mapped at 1000h-1FFFh (IN (E0h):
+; the CG-RAM loading, the modern look): the time dialog and the Unicard RTC (#pragma codeseg code_cold,
+; constseg rodata_cold). Loaded at 1200h together with the rest (tools/mkmzf.py), below the main part at 2000h.
+    SECTION code_cold
+    org     $1200
+    SECTION rodata_cold

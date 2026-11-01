@@ -1,8 +1,10 @@
 """Wrap a binary into an MZF file (Sharp tape format): 128-byte header + body.
 
-    python tools/mkmzf.py IN.bin OUT.mzf --name NAME [--load 2000] [--exec 2000]
+    python tools/mkmzf.py IN.bin OUT.mzf --name NAME [--load 2000] [--exec 2000] [--cold COLD.bin@1200]
 
-Taken over from MZ-700-Bad-Apple; here the program must end below 8000h (the MZ-800 VRAM window).
+Taken over from MZ-700-Bad-Apple. Here the main part (IN.bin at --load) must end below 8000h (the MZ-800 VRAM
+window); the cold part (src/mz/crt0.asm: code_cold, rodata_cold) goes in front of it at its own address and
+must end below the main part. The gap between them is filled with zeros, the MZF loads from the cold part.
 
 Header: 0 type (01h = machine code), 1-17 name (Sharp ASCII, 0Dh terminated), 12h size, 14h load address,
 16h exec address, the rest zeros.
@@ -29,6 +31,7 @@ def main():
     ap.add_argument('--name', default='WORLD CLOCK')
     ap.add_argument('--load', default='2000')
     ap.add_argument('--exec', dest='exec_addr', default=None)
+    ap.add_argument('--cold', default=None, help='FILE@ADDR (hex): a part loaded below the main one')
     a = ap.parse_args()
     load = int(a.load, 16)
     exec_addr = int(a.exec_addr, 16) if a.exec_addr else load
@@ -36,6 +39,18 @@ def main():
     if load + len(body) > 0x8000:
         raise SystemExit('program 0x%04X-0x%04X runs into the MZ-800 VRAM window (8000h)'
                          % (load, load + len(body) - 1))
+    print('main part %04Xh-%04Xh, %d bytes free below 8000h' % (load, load + len(body) - 1, 0x8000 - load - len(body)))
+    if a.cold:
+        path, addr = a.cold.rsplit('@', 1)
+        cold_at = int(addr, 16)
+        cold = open(path, 'rb').read()
+        if cold_at + len(cold) > load:
+            raise SystemExit('cold part 0x%04X-0x%04X runs into the main part (0x%04X)'
+                             % (cold_at, cold_at + len(cold) - 1, load))
+        print('cold part %04Xh-%04Xh, %d bytes free below %04Xh'
+              % (cold_at, cold_at + len(cold) - 1, load - cold_at - len(cold), load))
+        body = cold + bytes(load - cold_at - len(cold)) + body
+        load = cold_at
     with open(a.out, 'wb') as f:
         f.write(mzf(body, a.name, load, exec_addr))
 

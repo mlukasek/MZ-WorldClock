@@ -7,6 +7,11 @@
 #include "rtc_unicard.h"
 #include "hw.h"
 
+/* The cold part at 1200h-1FFFh (src/mz/crt0.asm): nothing here may run or be read while the MZ-800 has
+   the CG-ROM mapped (IN (E0h)) */
+#pragma codeseg code_cold
+#pragma constseg rodata_cold
+
 #define UC_CMD 0x50
 #define UC_DATA 0x51
 #define CMD_STSR 0x03

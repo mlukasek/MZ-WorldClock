@@ -16,8 +16,8 @@
   - vlastní znaky v CG-RAM (hiragana titulku, pruh po 1 s), na MZ-1500 pruh po 1 s přes PCG;
   - moderní vzhled 320×200 (klávesa G): mapa s dnem a nocí, domovské pásmo, 9 měst, domovský čas, pruh sekund;
   - klávesa M prohodí kontinenty v obou vzhledech.
-- **Další krok:** fáze 5, velké digitální a ručičkové hodiny. **Místo dochází:** program končí na 7DE4h, pod 8000h
-  zbývá 540 B ([rozhodnuti.md](rozhodnuti.md), paměť).
+- **Další krok:** fáze 5, velké digitální a ručičkové hodiny. Program se nahrává od 1200h, studená část je
+  v 1200h–1FFFh ([rozhodnuti.md](rozhodnuti.md), paměť).
 
 ## Plán vývoje
 
@@ -60,7 +60,7 @@ nic nemění.
 
 | Soubor | Co dělá |
 |---|---|
-| `src/mz/crt0.asm` | start na 2000h: `JP start`, testovací blok na 2003h, DI, SP C000h, BSS A000h |
+| `src/mz/crt0.asm` | start na 2000h: `JP start`, testovací blok na 2003h, DI, SP C000h, BSS A000h; studená část od 1200h |
 | `src/mz/machine.c` | detekce (signatura ROM, GDG přes port CEh, počet řádků), přepnutí MZ-800 do režimu MZ-700, konec do monitoru s nastavenými hodinami (TIMST) |
 | `src/mz/timebase.c` | CTC1 1 Hz z HSYNC, CTC2 čítač sekund, `clock_set` / `clock_now`, čekání na VBLK |
 | `src/mz/kbd.c` | matice klávesnice přes 8255 |
@@ -105,7 +105,9 @@ nic nemění.
 
 ## Překlad a testy
 
-- **Program:** `build.cmd` (zsdcc) nebo `build.cmd sccz80` vytvoří `build/worldclock.mzf`.
+- **Program:** `build.cmd` (zsdcc) vytvoří `build/worldclock.mzf` a vypíše, kolik místa zbývá v obou částech.
+  - `build.cmd sccz80` přeloží totéž sccz80. Program se tak už nevejde (studená část končí za 2000h), slouží jen
+    k porovnání překladačů.
   - Spouštět z `cmd` / PowerShellu (`cmd /c build.cmd`); z Git Bashe se .cmd nespustí.
 - **Emulátor:** `python tests/emu/run_wc.py [--machine eu|jp|eu-ntsc|mz800|mz1500]` na všech strojích kontroluje:
   - detekci (model, JP, NTSC, řádky, dělitel);
@@ -114,7 +116,7 @@ nic nemění.
   - návrat do monitoru po BREAK.
 - **Další varianty běhu:**
   - `--dialog`: čas se zadá klávesami do dialogu;
-  - `--native-boot`: MZ-800 nastartovaný v režimu MZ-800. Simuluje se kódem na 1200h, preview to neumí.
+  - `--native-boot`: MZ-800 nastartovaný v režimu MZ-800. Simuluje se kódem na B000h, preview to neumí.
   - `--rtc`: s připojenou Unicard. Program musí vzít čas z karty, emulovaná karta vrací místní čas hostitele.
     Evropské stroje ho čtou jako pražský, japonský jako tokijský.
   - `--drift 60`: hodina emulovaného času, porovnání hodin s emulátorem. Na PAL vychází −2,54 s/h, na NTSC

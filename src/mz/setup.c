@@ -13,6 +13,11 @@
 #include "wctime.h"
 #include "rtcsync.h"
 
+/* The cold part at 1200h-1FFFh (src/mz/crt0.asm): nothing here may run or be read while the MZ-800 has
+   the CG-ROM mapped (IN (E0h)) */
+#pragma codeseg code_cold
+#pragma constseg rodata_cold
+
 #define ROW_DATE 7
 #define ROW_TIME 9
 #define ROW_ZONE 11

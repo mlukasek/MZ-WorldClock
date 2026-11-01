@@ -11,6 +11,11 @@
 #include "timebase.h"
 #include "zones.h"
 
+/* The cold part at 1200h-1FFFh (src/mz/crt0.asm): nothing here may run or be read while the MZ-800 has
+   the CG-ROM mapped (IN (E0h)) */
+#pragma codeseg code_cold
+#pragma constseg rodata_cold
+
 #define SYNC_EVERY 600               /* seconds */
 #define SYNC_FRAMES 150              /* give up a sync after 3 s without a change of the card's second */
 
