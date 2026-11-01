@@ -173,6 +173,8 @@ Nová rozhodnutí dopisovat na konec, s datem a důvodem.
   - Co by přeteklo přes okraj, může mít vlastní místo (sekce `[atlantic]` v `data/historic.txt`). Dnes nic.
   - `tools/mkhistoric.py` kontroluje, že nic nepřetéká a nic se nepřekrývá.
 - **Přepínání historického a moderního vzhledu na MZ-800** proto nebude na M, ale na **G** (grafika).
+- **Titulek podle pohledu** (autor): hiragana (せかいどけい) jen s Tokiem uprostřed, tj. v dobovém pohledu.
+  S Evropou uprostřed je `WORLD CLOCK` i na strojích s hiraganou (japonský MZ-700, MZ-1500, MZ-800).
 
 ## 2026-11-01: jména měst (autor)
 

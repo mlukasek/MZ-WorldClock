@@ -94,7 +94,8 @@ void hist_draw(void)
         memcpy(ch, it->codes, it->len);
         memset(ch + 1000, it->attr, it->len);
     }
-    if (mach.jp || hist_hiragana) {
+    /* the hiragana title with Tokyo in the middle (the period view), WORLD CLOCK with Europe in the middle */
+    if ((mach.jp || hist_hiragana) && hist_view != VIEW_ATLANTIC) {
         memcpy(scr, hist_title_jp_chars, 40);
         memcpy(scr + 1000, hist_title_jp_attrs, 40);
     } else {

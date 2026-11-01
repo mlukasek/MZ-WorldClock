@@ -59,7 +59,8 @@ def check_screen(emu, data, utc, jp, errs, view='pacific', fine=False, pcg=False
     """The whole screen against the data: the static part of `view` (map, names, title, ruler), the clocks
     at the view's places in the time `utc` (zoneinfo), the seconds bar; row 24 empty or `hint` (hint_row)."""
     chars, attrs = emu.text_dump()
-    want = mkhistoric.compose(data, 'JP' if jp else 'EU', view)   # jp: the hiragana title
+    # jp: the hiragana title, but WORLD CLOCK in the Atlantic view (Europe in the middle)
+    want = mkhistoric.compose(data, 'JP' if jp and view == 'pacific' else 'EU', view)
     if hint:
         want.chars[960:1000], want.attrs[960:1000] = hint
     clocks = mkhistoric.clock_positions(data, view)
